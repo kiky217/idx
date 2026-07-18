@@ -100,16 +100,25 @@ def _fetch_all():
                 _set("ticker_all", all_t)
 
             tickers = {}
-            # Show all pairs, not just owned
-            all_pairs = list(all_t.keys())[:100]  # max 100 pairs
-            for pk in all_pairs:
-                if pk.endswith("_idr"):
-                    tickers[pk] = all_t[pk]
+            # R-009: Rank pairs by volume IDR instead of slice
+            idr_pairs = [(pk, float(all_t[pk].get("vol_idr", 0))) for pk in all_t if pk.endswith("_idr")]
+            idr_pairs.sort(key=lambda x: -x[1])  # highest volume first
+            top_pairs = [pk for pk, _ in idr_pairs[:100]]
+            for pk in top_pairs:
+                tickers[pk] = all_t[pk]
 
             if tickers:
                 _set("tickers", tickers)
                 _set("age_ts", time.time())
-                # push chart data for all pairs
+                # R-010: Fetch depth for top pairs by volume, not just owned BTC
+                top3 = top_pairs[:3]
+                for pk in top3:
+                    try:
+                        d = requests.get(f"{INDODAX_BASE}/api/depth/{pk}", timeout=5)
+                        if d.ok:
+                            _set(f"depth_{pk}", d.json())
+                    except:
+                        pass
                 for pair, data in tickers.items():
                     last = float(data.get("last", 0))
                     if last > 0:
