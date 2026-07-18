@@ -213,6 +213,16 @@ Catatan: Health gate sudah mencakup semua kondisi yang diminta auditor.
 - Tambahkan route-level test client dengan dependency mocks dan pastikan tidak memulai background thread/order.
 - Jalankan workflow, simpan link run sukses, dan baru minta re-audit.
 
+
+**10-test source re-audit — 18 Juli 2026:** Status tetap **FAIL** sebelum CI dijalankan.
+
+1. File test berada di `docker/idx/tests/`; penambahan path `dirname + '/..'` menghasilkan `docker/idx`, bukan root repository tempat `app.py` berada. Import tetap berisiko gagal. Gunakan `Path(__file__).resolve().parents[3]` atau `PYTHONPATH` root workspace.
+2. Test bernama “START route rejects with open orders” hanya memanggil `system_healthy()` dan mencari issue; ia tidak menggunakan Flask test client atau memanggil route `scalper_start`, jadi tidak membuktikan HTTP 503.
+3. Pair rules kosong/error belum memiliki fixture.
+4. Workflow belum dijalankan untuk commit 10-test ini.
+
+**Syarat revisi:** perbaiki path root; test `app.test_client().post('/api/scalper/start', ...)` dengan mock auth/scalper sehingga tidak memulai worker; tambahkan pair-rules empty/error; lalu jalankan workflow dan kirim link run.
+
 ### R-005/R-010 — Revisi 2026-07-18
 
 Status: pushed
