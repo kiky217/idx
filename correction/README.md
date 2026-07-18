@@ -70,3 +70,44 @@ b5088e2 R-008: Decimal import
 3. Catatan `R-013` harus dipertahankan sampai WebSocket, Candle Engine, dan UI candle tervalidasi end-to-end.
 4. Jangan menulis secret, API key, password, token, atau isi `.env` di file ini, commit log, issue, maupun screenshot.
 5. Untuk revisi, tambahkan bagian `Re-audit YYYY-MM-DD` dengan ID, bukti uji, hasil, dan commit; jangan menghapus temuan lama.
+
+
+---
+
+## Re-audit prioritas — 18 Juli 2026 [AUDIT-LOCKED / JANGAN HAPUS]
+
+### Status yang belum dapat menjadi PASS
+
+| ID | Status audit | Hasil verifikasi source |
+|---|---|---|
+| R-016 | OPEN | Fallback secret sudah dihapus, `.env` sudah diabaikan Git, dan `get_db()` sudah mengembalikan koneksi. Tetap butuh bukti rotasi kredensial dan uji deployment. |
+| R-001 | OPEN | `ENABLE_LIVE_TRADING` sudah menjadi gate pada inisialisasi scalper. Tetap butuh uji restart dan pembuktian executor tidak dapat LIVE tanpa gate. |
+| R-003 | OPEN | Auth fail-closed sudah ada, tetapi belum diterapkan ke seluruh endpoint sensitif. |
+| R-002 | OPEN | Health gate MySQL/pair rules sudah ada, tetapi freshness dan recovery belum lengkap. |
+
+### Instruksi berikutnya — IDX-R-003 Autentikasi [JANGAN HAPUS]
+
+Tambahkan `require_api_key()` ke endpoint berikut:
+
+- `POST /api/telegram/daily`
+- `GET /api/scalper/trades`
+- `GET /api/config`
+
+Tentukan boundary endpoint read-only publik secara eksplisit. Jika dashboard bukan untuk publik, lindungi juga endpoint market/status (`/api/live`, `/api/tickers`, `/ticker/<pair>`, dan `/health`) melalui aplikasi atau reverse proxy.
+
+Bukti wajib sebelum meminta PASS:
+
+1. Tanpa `X-API-Key` → 401; jika `DASHBOARD_API_KEY` tidak ada → 503.
+2. Key salah → 401.
+3. Key benar → akses hanya berjalan untuk endpoint yang diizinkan.
+4. Tidak ada API key/log credential yang tercetak pada respons atau log uji.
+
+### Instruksi setelah R-003 — IDX-R-002 Health gate [JANGAN HAPUS]
+
+1. Jika `age_ts` tidak ada, jadikan health gagal; jangan hanya mengecek timestamp yang ada.
+2. Tambahkan status freshness stream WebSocket/candle bila WebSocket menjadi source aktif.
+3. Periksa open order atau recovery state sebelum START; bila belum direkonsiliasi, tolak START.
+4. Kembalikan reasons terstruktur dari `/health` dan `/api/scalper/start`.
+5. Uji tiap kondisi gagal secara terpisah, lalu tulis output tersanitasi di README.
+
+**Aturan:** status `pushed` hanya berarti perubahan sudah dikirim. Hanya auditor yang boleh menetapkan `PASS` setelah bukti source dan uji sesuai.
