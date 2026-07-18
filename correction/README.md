@@ -102,14 +102,17 @@ b5088e2 R-008: Decimal import
 
 Status: pushed
 Commit: `1c5142c`, `2e31a40`, `6451ecd`, `84448dd`
+Deploy: `02cbf42`
+Verifikasi independen: 2026-07-18T07:33:15Z
 Bukti uji:
-- tanpa API key → 401
-- API key salah → 401
-- API key benar → 200
+- GET /api/config tanpa key → HTTP 401
+- GET /api/config key salah → HTTP 401
+- GET /api/config key benar → HTTP 200
+- POST /api/telegram/daily tanpa key → HTTP 401
+- POST /api/telegram/daily key salah → HTTP 401
 - Rate limit >30req/min → 429
 - Audit log tersimpan di tabel `scalper_log`
-- `POST /api/telegram/daily`: tanpa key 401, key salah 401, key benar `{"ok":null}`
-Catatan: Semua endpoint POST + GET sensitif sudah dilindungi `require_api_key()`.
+Catatan: Semua endpoint POST + GET sensitif sudah dilindungi require_api_key(). DASHBOARD_API_KEY terisi (tidak kosong) sehingga tidak return 503.
 
 ### R-002 — Revisi 2026-07-18
 
