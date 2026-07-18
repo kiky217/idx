@@ -4,9 +4,11 @@
 **Acuan:** `audit_idx_1.md`
 **Format status:** OPEN → auditor yang set PASS
 
+> **[AUDIT-LOCKED — JANGAN HAPUS]** Summary, Commit Log, Files Changed, dan catatan status di file ini adalah bukti audit. Boleh menambahkan pembaruan bertanggal; jangan menghapus, menimpa, atau mengubah riwayat bukti tanpa addendum yang menjelaskan alasan dan commit penggantinya.
+
 ---
 
-## Summary
+## Summary — [AUDIT-LOCKED / JANGAN HAPUS]
 
 | ID | Temuan | File | Status |
 |----|--------|------|--------|
@@ -27,11 +29,11 @@
 | R-014 | Single gunicorn worker | `Dockerfile` | 🔄 pushed |
 | R-013 | Candle chart | UI | 🔄 partial |
 
-**Ket:**
+**Ket: [AUDIT-LOCKED / JANGAN HAPUS]**
 - R-013 (Candle chart) butuh WebSocket aktif + candle engine. Struktur `gateway.py` sudah siap.
 - Semua file terdampak sudah di-push ke `master` branch.
 
-## Commit Log
+## Commit Log — [AUDIT-LOCKED / JANGAN HAPUS]
 ```
 ba4a664 R-014: single gunicorn worker
 a5a1543 R-007/R-011/R-012: risk persistence + calendar reset + exposure
@@ -47,7 +49,7 @@ b5088e2 R-008: Decimal import
 0de9a5b R-016: get_db fix + seed pairs
 ```
 
-## Files Changed (final)
+## Files Changed (final) — [AUDIT-LOCKED / JANGAN HAPUS]
 - `app.py` — S-01, S-02, S-03, S-09, S-10, S-16
 - `scalper.py` — S-01, S-06
 - `indodax_signal.py` — S-04, S-05, S-08
@@ -57,3 +59,14 @@ b5088e2 R-008: Decimal import
 - `Dockerfile` — S-14
 - `.env` — S-02, S-16
 - `.gitignore` — S-16
+
+
+---
+
+## Ketentuan bukti — [AUDIT-LOCKED / JANGAN HAPUS]
+
+1. Status `pushed` berarti source telah dikirim ke branch, **bukan** otomatis `PASS`.
+2. Status hanya dapat menjadi `PASS` setelah auditor memverifikasi source, konfigurasi aman, dan bukti uji yang relevan.
+3. Catatan `R-013` harus dipertahankan sampai WebSocket, Candle Engine, dan UI candle tervalidasi end-to-end.
+4. Jangan menulis secret, API key, password, token, atau isi `.env` di file ini, commit log, issue, maupun screenshot.
+5. Untuk revisi, tambahkan bagian `Re-audit YYYY-MM-DD` dengan ID, bukti uji, hasil, dan commit; jangan menghapus temuan lama.
