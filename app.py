@@ -1208,6 +1208,8 @@ def telegram_test():
 
 @app.route("/api/telegram/daily", methods=["POST"])
 def telegram_daily_route():
+    auth = require_api_key()
+    if auth: return auth
     ok = notify_daily(pnl_storage.get_summary())
     return jsonify({"ok": ok})
 
