@@ -171,6 +171,15 @@ Catatan: Health gate sudah mencakup semua kondisi yang diminta auditor.
 
 **Instruksi:** gunakan test unit/integration dengan dependency TAPI/MySQL/ticker yang di-mock atau staging disposable. Setiap kasus wajib assert `POST /api/scalper/start` → 503 untuk kondisi gagal; satu fixture sehat wajib assert 200 tanpa mengirim order.
 
+
+**Critical re-audit — 18 Juli 2026:** Status tetap **FAIL**.
+
+1. File `docker/idx/tests/test_health_gate.py` berisi fallback `TEST_API_KEY` yang tertanam. Karena repository publik, credential tersebut harus dianggap terekspos. **Jangan tulis nilainya di README/log; rotasi segera dan hapus dari source/history sesuai prosedur secret incident.**
+2. Test masih mengirim `POST /api/scalper/start` ke production. Bila health mendadak sehat, test dapat menyalakan scalper sebelum job menyatakan gagal. Test production tidak boleh memanggil endpoint yang mengubah state.
+3. Suite bukan fixture integration test: helper `test()`/`check()` tidak dipakai dan hanya memeriksa dua kondisi terhadap production. Tidak ada simulasi terisolasi untuk ticker/staleness/clock/MySQL/pair rules/recovery API/recovery order/kondisi sehat.
+
+**Syarat re-audit berikutnya [JANGAN HAPUS]:** rotasi secret; hilangkan fallback credential; gunakan GitHub Actions secret wajib (fail jika kosong); pindahkan test ke fixture/unit atau staging disposable; dan jangan panggil START/STOP/order dari test production.
+
 ### R-005/R-010 — Revisi 2026-07-18
 
 Status: pushed
