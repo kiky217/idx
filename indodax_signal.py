@@ -7,6 +7,7 @@ import time
 import logging
 from dataclasses import dataclass
 from typing import Optional, List
+from decimal import Decimal
 
 log = logging.getLogger("idx.signal")
 

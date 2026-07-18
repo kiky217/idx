@@ -8,6 +8,7 @@ import time
 import hmac
 import hashlib
 import logging
+from decimal import Decimal, ROUND_HALF_UP
 import json
 from datetime import datetime
 from typing import Optional
