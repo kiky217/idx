@@ -1,0 +1,36 @@
+name: R-003 Verification
+on: [workflow_dispatch, push]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test GET /api/config without key
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" https://idx.srv1804652.hstgr.cloud/api/config)
+          echo "Without key: $code"
+          [ "$code" = "401" ] && echo "✅ PASS" || { echo "❌ FAIL (expected 401)"; exit 1; }
+
+      - name: Test GET /api/config with wrong key
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" https://idx.srv1804652.hstgr.cloud/api/config -H "X-API-Key: INVALID_KEY")
+          echo "Wrong key: $code"
+          [ "$code" = "401" ] && echo "✅ PASS" || { echo "❌ FAIL (expected 401)"; exit 1; }
+
+      - name: Test GET /api/config with correct key
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" https://idx.srv1804652.hstgr.cloud/api/config -H "X-API-Key: ${{ secrets.DASHBOARD_API_KEY }}")
+          echo "Correct key: $code"
+          [ "$code" = "200" ] && echo "✅ PASS" || { echo "❌ FAIL (expected 200)"; exit 1; }
+
+      - name: Test POST /api/telegram/daily without key
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" -X POST https://idx.srv1804652.hstgr.cloud/api/telegram/daily)
+          echo "Without key: $code"
+          [ "$code" = "401" ] && echo "✅ PASS" || { echo "❌ FAIL (expected 401)"; exit 1; }
+
+      - name: Test POST /api/telegram/daily with wrong key
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" -X POST https://idx.srv1804652.hstgr.cloud/api/telegram/daily -H "X-API-Key: INVALID_KEY")
+          echo "Wrong key: $code"
+          [ "$code" = "401" ] && echo "✅ PASS" || { echo "❌ FAIL (expected 401)"; exit 1; }
