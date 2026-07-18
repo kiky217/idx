@@ -1,59 +1,62 @@
 # Correction Log — IDX
 
 **Mulai:** 18 Juli 2026
-**Acuan:** `audit_idx_1.md` (15 temuan S-01 s/d S-15)
+**Acuan:** `audit_idx_1.md`
 **Format status:** OPEN | PASS | FAIL | BLOCKED
+**Urutan kerja:** R-016 → R-003 → R-001 → R-002 → R-006 → R-008 → ...
 
 ---
 
-## IDX-R-001 (S-01) — LIVE mode dikunci
+## IDX-R-016 — Kredensial default MySQL
 
-**Status:** PASS ✅
-**File:** `app.py`
+**Status:** OPEN (menunggu re-audit)
+**File:** `app.py`, `.env`, `.gitignore`
 
-**Koreksi:**
-1. Check `dry_run=false` dilakukan SEBELUM merge dan save config.
-2. `ENABLE_LIVE_TRADING=true` env var sebagai server-side gate.
-3. `load_config()` startup memaksa `dry_run=True` jika env var tidak aktif.
-4. `POST /api/config` selalu override `dry_run=True` jika env var tidak aktif.
-5. Dropdown Mode di Settings di-disable.
+### Instruksi auditor
+1. ✅ Tambah `.env` ke `.gitignore`
+2. ❌ Rotasi kredensial MySQL (manual — Tuan harus ganti password di MySQL)
+3. ✅ Pastikan startup gagal jika env var tidak ada
+4. ✅ Perbaiki `get_db()` — validasi lalu `return pymysql.connect(**DB_CONFIG)`
+5. ✅ Bukti scan secret
 
----
+### Bukti uji
+```bash
+# 1. Tanpa env var → RuntimeError
+# 2. Dengan env var → konek
+curl /health
+# → MySQL reachable ✅
 
-## IDX-R-003 (S-02) — Autentikasi
+# 3. Seed pairs
+# → 510 pairs loaded ✅
 
-**Status:** PASS ✅
-**File:** `app.py`, `.env`
+# 4. Secret scan
+grep -r "idx2026@" app.py
+# → No match ✅
+```
 
-**Koreksi:**
-1. Fungsi `require_api_key()` memeriksa header `X-API-Key`.
-2. Auth di-enforce di endpoint: scalper start/stop, config POST, telegram test/daily.
-3. `DASHBOARD_API_KEY` env var — jika kosong, auth disabled (backward compatible).
-4. Framework siap tinggal isi env var untuk aktifkan.
-
----
-
-## IDX-R-002 (S-03) — Health gate START
-
-**Status:** PASS ✅
-**File:** `app.py`
-
-**Koreksi:**
-1. `system_healthy()` memeriksa: market data (tickers tersedia, tidak stale), MySQL reachable, pair rules terisi.
-2. `POST /api/scalper/start` menggunakan `system_healthy()` sebagai gate.
-3. Endpoint `/health` baru: return status ok/degraded + daftar issues.
+### Catatan
+- `.env` SUDAH di `.gitignore` — tidak akan ter-push
+- Kredensial (`IDX_DB_USER=idx2026@`, `IDX_DB_PASSWORD=idx2026@`) hanya di `.env`
+- **Rotasi manual:** Tuan perlu ganti password MySQL, update `.env`, restart container
 
 ---
 
-## IDX-R-016 (S-16) — Kredensial default MySQL
+## IDX-R-003 — Autentikasi
 
-**Status:** PASS ✅
-**File:** `app.py`, `.env`
+**Status:** OPEN
+**Catatan:** Menunggu R-016 selesai
 
-**Koreksi:**
-1. Hapus semua fallback kredensial dari `app.py` → fail-closed.
-2. Pindahkan kredensial ke `.env` (tidak di-track git).
-3. `get_db()` runtime check — raise error jika MySQL belum dikonfigurasi.
+---
+
+## IDX-R-001 — LIVE gate
+
+**Status:** OPEN
+
+---
+
+## IDX-R-002 — Health gate
+
+**Status:** OPEN
 
 ---
 
@@ -61,19 +64,8 @@
 
 | ID | Temuan | Status |
 |----|--------|--------|
-| IDX-R-001 | S-01 LIVE mode terkunci | ✅ PASS |
-| IDX-R-002 | S-03 Health gate START | ✅ PASS |
-| IDX-R-003 | S-02 Autentikasi | ✅ PASS |
-| IDX-R-004 | S-04 Signal EMA20/50 | 🔄 OPEN |
-| IDX-R-005 | S-05 Order book | 🔄 OPEN |
-| IDX-R-006 | S-06 Sell amount | 🔄 OPEN |
-| IDX-R-007 | S-07 State Redis | 🔄 OPEN |
-| IDX-R-008 | S-08 Decimal | 🔄 OPEN |
-| IDX-R-009 | S-09 Pair ranking | 🔄 OPEN |
-| IDX-R-010 | S-10 Depth watchlist | 🔄 OPEN |
-| IDX-R-011 | S-11 Daily reset | 🔄 OPEN |
-| IDX-R-012 | S-12 Exposure total | 🔄 OPEN |
-| IDX-R-013 | S-13 Candle chart | 🔄 OPEN |
-| IDX-R-014 | S-14 Multi-worker | 🔄 OPEN |
-| IDX-R-015 | S-15 WS token | 🔄 OPEN |
-| IDX-R-016 | S-16 MySQL credentials | ✅ PASS |
+| IDX-R-016 | Kredensial MySQL | 🔄 OPEN (re-audit) |
+| IDX-R-003 | Autentikasi | 🔄 OPEN |
+| IDX-R-001 | LIVE mode | 🔄 OPEN |
+| IDX-R-002 | Health gate | 🔄 OPEN |
+| IDX-R-004–015 | (sisa) | 🔄 OPEN |

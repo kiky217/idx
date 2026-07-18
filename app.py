@@ -815,6 +815,7 @@ def get_db():
     # S-16: Fail-closed — no default credentials
     if not DB_CONFIG["host"] or not DB_CONFIG["user"] or not DB_CONFIG["password"] or not DB_CONFIG["database"]:
         raise RuntimeError("MySQL not configured. Set IDX_DB_HOST, IDX_DB_USER, IDX_DB_PASSWORD, IDX_DB_NAME env vars.")
+    return pymysql.connect(**DB_CONFIG)
 
 def db_exec(sql, params=None):
     conn = get_db()
