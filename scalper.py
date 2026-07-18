@@ -22,6 +22,9 @@ class ScalperEngine:
     def __init__(self):
         # --- config from env ---
         dry_run = os.environ.get("SCALPER_DRY_RUN", "true").lower() != "false"
+        # R-001: ENABLE_LIVE_TRADING is the one true gate
+        if os.environ.get("ENABLE_LIVE_TRADING", "").lower() != "true":
+            dry_run = True
         max_order = float(os.environ.get("SCALPER_MAX_ORDER_IDR", "50000"))
         max_daily_loss = float(os.environ.get("SCALPER_MAX_DAILY_LOSS", "200000"))
 
