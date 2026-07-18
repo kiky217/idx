@@ -1,61 +1,95 @@
-# IDX — Source Code Archive
+# IDX — Indodax Scalping Dashboard
 
-**Tanggal:** 2026-07-18 12:24
-**Total:** 15 files, 172KB, 3.310 baris
+**Status:** Production (DRY RUN)
+**Stack:** Python Flask + MySQL 8.0 + Docker
+**Domain:** https://idx.srv1804652.hstgr.cloud
+**Repo:** https://github.com/kiky217/idx
 
 ---
 
-## File List
+## 🔬 Audit Status
 
-| File | Baris | Ukuran | Fungsi |
-|------|-------|--------|--------|
-| `app.py` | 1.109 | 51KB | Flask dashboard + API + HTML template |
-| `gateway.py` | 233 | 8.6KB | WebSocket market gateway + candle engine |
-| `scalper.py` | 196 | 7.5KB | Scalper engine (loop, signal processing) |
-| `indodax_signal.py` | 190 | 6.0KB | Signal engine (EMA9/21, RSI, volume) |
-| `executor.py` | 211 | 7.0KB | Trade executor (order placement) |
-| `risk.py` | 109 | 4.2KB | Risk manager (config, limits) |
-| `pnl.py` | 148 | 6.2KB | PnL storage and tracking |
-| `telegram.py` | 109 | 3.9KB | Telegram bot integration |
-| `mysql-schema.sql` | 385 | 16KB | MySQL 14-table schema |
-| `blueprint.md` | 316 | 15KB | AkiraBot Blueprint v1.0 |
-| `profile.md` | 143 | 4.5KB | AEGERS project profile |
-| `CHANGELOG.md` | 120 | 5.8KB | Change log |
-| `Dockerfile` | 14 | 350B | Docker build |
-| `docker-compose.yml` | 22 | 553B | Docker compose |
-| `requirements.txt` | 5 | 77B | Python dependencies |
+Semua temuan audit di-track di [`correction/README.md`](correction/README.md).
 
-## Architecture Overview
+| ID | Temuan | Status |
+|----|--------|--------|
+| R-001 | LIVE mode terkunci | 🔄 pushed |
+| R-002 | Health gate | 🔄 pushed |
+| R-003 | Autentikasi + rate limit | 🔄 pushed |
+| R-004 | Signal v2 (EMA20/50) | 🔄 pushed |
+| R-005 | Order book spread | 🔄 pushed |
+| R-006 | Sell amount eksplisit | 🔄 pushed |
+| R-007 | State persistence | 🔄 pushed |
+| R-008 | Decimal precision | 🔄 pushed |
+| R-009 | Pair ranking by volume | 🔄 pushed |
+| R-010 | Depth watchlist | 🔄 pushed |
+| R-011 | Daily reset kalender | 🔄 pushed |
+| R-012 | Exposure total | 🔄 pushed |
+| R-013 | Candle chart | 🔄 partial |
+| R-014 | Single gunicorn worker | 🔄 pushed |
+| R-015 | WS token env var | 🔄 pushed |
+| R-016 | MySQL credentials | 🔄 pushed |
 
+## 🔧 Fitur
+
+| Fitur | Status |
+|-------|--------|
+| Dashboard Bootstrap 5 | ✅ |
+| Live ticker 497 pair IDR | ✅ |
+| Search + filter pair | ✅ |
+| Chart.js price chart | ✅ |
+| Portfolio (saldo + aset) | ✅ |
+| Scalper ENGINE start/stop | ✅ |
+| Risk manager (daily limits) | ✅ |
+| Telegram notifikasi | ✅ |
+| API Key auth | ✅ (X-API-Key header) |
+| Rate limiter | ✅ (30 req/min/IP) |
+| Audit log | ✅ (tabel scalper_log) |
+| Health check endpoint | ✅ (/health) |
+| DRY RUN mode (terkunci) | ✅ |
+| Dual timezone (WIB/UTC) | ✅ |
+| WebSocket gateway | 🆕 (gateway.py) |
+| Candle engine 1m/5m/15m | 🆕 (gateway.py) |
+
+## 📦 File Structure
+
+| File | Fungsi |
+|------|--------|
+| `app.py` | Flask dashboard + API + HTML |
+| `gateway.py` | WebSocket market gateway + candle |
+| `scalper.py` | Scalper engine |
+| `indodax_signal.py` | Signal engine v2 (EMA20/50) |
+| `executor.py` | Trade executor |
+| `risk.py` | Risk manager |
+| `pnl.py` | PnL tracking |
+| `telegram.py` | Telegram bot |
+| `mysql-schema.sql` | Database schema (14 tabel) |
+| `blueprint.md` | AkiraBot Precision Scalper blueprint |
+| `correction/` | Audit correction log |
+
+## 🔗 Endpoints
+
+| Endpoint | Method | Auth | Fungsi |
+|----------|--------|------|--------|
+| `/` | GET | - | Dashboard UI |
+| `/health` | GET | - | Health check |
+| `/api/live` | GET | - | Live ticker data |
+| `/api/config` | GET | ✅ | Config |
+| `/api/config` | POST | ✅ | Update config |
+| `/api/portfolio` | GET | ✅ | Balance + aset |
+| `/api/scalper/start` | POST | ✅ | Start engine |
+| `/api/scalper/stop` | POST | ✅ | Stop engine |
+| `/api/scalper/trades` | GET | ✅ | Trade log |
+| `/api/pnl/*` | GET | ✅ | PnL data |
+| `/api/telegram/*` | POST | ✅ | Telegram notify |
+| `/api/chart/<pair>` | GET | - | Chart data |
+| `/api/pairs` | GET | - | All pairs |
+| `/ticker/<pair>` | GET | - | Single ticker |
+| `/api/tickers` | GET | - | All tickers |
+
+## 🐳 Docker
+
+```bash
+cd /docker/idx
+docker compose up -d
 ```
-┌────────────────────────────────────────────────────┐
-│  Container IDX                                      │
-│  Python 3.12 + Flask + gunicorn                     │
-│                                                     │
-│  Threads: Flask API, Market Gateway, Candle Engine   │
-│  State: In-memory dict (Redis planned)               │
-│  DB: MySQL 8.0 (delta_mysql container)               │
-│  Cache: In-memory dict + SQLite (config.json)        │
-└────────────────────────────────────────────────────┘
-         │
-         ▼
-┌────────────────┐     ┌──────────────────┐
-│  delta_mysql   │     │  Indodax API     │
-│  MySQL 8.0     │     │  REST + WebSocket │
-└────────────────┘     └──────────────────┘
-```
-
-## Blueprint Compliance
-
-| Section | Status |
-|---------|--------|
-| ✅ A. Foundation | Compose ✅, MySQL ✅, Redis ❌ |
-| ❌ B. Market Gateway | REST ✅, WebSocket 🆕 (gateway.py) |
-| ✅ C. Storage | MySQL 14 tabel ✅ |
-| ❌ D. Candle/Indicators | Struktur 🆕 (gateway.py) |
-| ❌ E. Strategy | Masih EMA9/21 |
-| ❌ F. Paper Executor | Ada executor.py |
-| ⚠️ G. Dashboard | Flask ✅, auth ❌ |
-| ❌ H. Backtest | Belum |
-| ❌ I. Paper Trading | Belum |
-| ❌ J. Live Gate | Terkunci (DRY_RUN) |
