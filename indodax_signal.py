@@ -125,8 +125,14 @@ class SignalEngine:
         vol_avg = sum(vols[-20:]) / max(len(vols[-20:]), 1)
         vol_ratio = vol_now / max(vol_avg, 0.0001)
         
-        # Spread
-        spread_pct = (closes[-1] - closes[-1]*0.999) / max(closes[-1]*0.999, 1) * 100
+        # ── R-005: Spread from actual best bid/ask if available ──
+        if "buy" in ticks[-1] and "sell" in ticks[-1] and ticks[-1]["buy"] > 0 and ticks[-1]["sell"] > 0:
+            spread_pct = (ticks[-1]["sell"] - ticks[-1]["buy"]) / max(ticks[-1]["buy"], 1) * 100
+        else:
+            spread_pct = 0.1  # default tight spread
+        # Use bid/ask for microstructure if available
+        bid = ticks[-1].get("buy", price * 0.999)
+        ask = ticks[-1].get("sell", price * 1.001)
         
         reasons = []
         score = 0.0
