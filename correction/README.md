@@ -160,6 +160,17 @@ Catatan: Health gate sudah mencakup semua kondisi yang diminta auditor.
 - Hapus tindakan START/STOP dari workflow production; gunakan environment staging/disposable dengan fixture/mocks.
 - Tambahkan test terisolasi untuk setiap kondisi wajib dan satu test sehat yang tidak melakukan order.
 
+
+**Re-audit lanjutan — 18 Juli 2026:** Status tetap **FAIL**.
+
+- Perbaikan recovery sekarang fail-closed dan workflow tidak lagi memanggil START/STOP; kedua perbaikan ini valid.
+- Job bernama “Simulate empty ticker” hanya memeriksa bahwa `/health` menjawab HTTP 200; ia tidak mensimulasikan ticker kosong atau memeriksa `issues`.
+- Job MySQL hanya mencari string `mysql` pada body; itu bukan assertion health yang deterministik.
+- Workflow belum menguji ticker kosong, stale, clock skew, MySQL gagal, pair rules gagal, recovery API gagal, recovery order ada, dan kondisi sehat secara terisolasi.
+- Sertakan link run GitHub Actions yang sukses setelah workflow diganti dengan fixture/staging test non-mutatif.
+
+**Instruksi:** gunakan test unit/integration dengan dependency TAPI/MySQL/ticker yang di-mock atau staging disposable. Setiap kasus wajib assert `POST /api/scalper/start` → 503 untuk kondisi gagal; satu fixture sehat wajib assert 200 tanpa mengirim order.
+
 ### R-005/R-010 — Revisi 2026-07-18
 
 Status: pushed
