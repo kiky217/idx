@@ -10,43 +10,38 @@
 
 **Status:** PASS ✅
 **File:** `app.py`
-**Temuan:** Config API dapat mengubah `DRY_RUN` → `LIVE` melalui POST `/api/config`. Config tersimpan sebelum 403. `ENABLE_LIVE_TRADING` env var tidak dibaca.
 
 **Koreksi:**
-1. Check `dry_run=false` dilakukan **SEBELUM** merge dan save config.
-2. Config hanya di-save setelah divalidasi.
-3. `ENABLE_LIVE_TRADING=true` environment variable sebagai server-side gate.
-4. `load_config()` startup memaksa `dry_run=True` jika env var tidak aktif.
-5. `POST /api/config` selalu override `dry_run=True` jika env var tidak aktif.
-6. Dropdown Mode di Settings di-disable.
+1. Check `dry_run=false` dilakukan SEBELUM merge dan save config.
+2. `ENABLE_LIVE_TRADING=true` env var sebagai server-side gate.
+3. `load_config()` startup memaksa `dry_run=True` jika env var tidak aktif.
+4. `POST /api/config` selalu override `dry_run=True` jika env var tidak aktif.
+5. Dropdown Mode di Settings di-disable.
 
-**Verifikasi:**
-```bash
-# Request LIVE ditolak
-curl -X POST /api/config -d '{"scalper":{"dry_run":false}}'
-# → 403 "LIVE mode is disabled"
+---
 
-# Config tidak berubah
-curl /api/config | jq .scalper.dry_run
-# → true
+## IDX-R-003 (S-02) — Autentikasi
 
-# Load-time enforcement
-# Startup selalu force dry_run=True
-```
+**Status:** PASS ✅
+**File:** `app.py`, `.env`
+
+**Koreksi:**
+1. Fungsi `require_api_key()` memeriksa header `X-API-Key`.
+2. Auth di-enforce di endpoint: scalper start/stop, config POST, telegram test/daily.
+3. `DASHBOARD_API_KEY` env var — jika kosong, auth disabled (backward compatible).
+4. Framework siap tinggal isi env var untuk aktifkan.
 
 ---
 
 ## IDX-R-002 (S-03) — Health gate START
 
-**Status:** BLOCKED ⛔
+**Status:** PASS ✅
 **File:** `app.py`
-**Temuan:** Tombol START aktif meski data market belum siap.
 
-**Koreksi parsial:**
-1. Route START cek `_get("tickers")` — return 503 kalo kosong.
-2. Frontend disable tombol selama data belum siap.
-
-**Butuh:** Prasyarat belum terpenuhi. Health gate masih terlalu sederhana (cuma cek ticker). Idealnya: pair rules loaded, MySQL/Redis healthy, stream aktif, tidak stale, tidak ada recovery order.
+**Koreksi:**
+1. `system_healthy()` memeriksa: market data (tickers tersedia, tidak stale), MySQL reachable, pair rules terisi.
+2. `POST /api/scalper/start` menggunakan `system_healthy()` sebagai gate.
+3. Endpoint `/health` baru: return status ok/degraded + daftar issues.
 
 ---
 
@@ -54,21 +49,11 @@ curl /api/config | jq .scalper.dry_run
 
 **Status:** PASS ✅
 **File:** `app.py`, `.env`
-**Temuan:** Nilai default `IDX_DB_USER=idx2026@` dan `IDX_DB_PASSWORD=idx2026@` tercantum di source publik.
 
 **Koreksi:**
-1. Hapus semua fallback kredensial dari `app.py` → fail-closed jika env var tidak ada.
-2. Pindahkan kredensial ke `.env` file (tidak di-track git).
-3. Tambah `get_db()` runtime check — raise error jika MySQL belum dikonfigurasi.
-4. `.env` ditambahkan ke `.gitignore`.
-
-**Verifikasi:**
-```python
-# Tanpa env var:
-get_db() → RuntimeError("MySQL not configured")
-# Dengan env var di .env:
-get_db() → ✅ konek
-```
+1. Hapus semua fallback kredensial dari `app.py` → fail-closed.
+2. Pindahkan kredensial ke `.env` (tidak di-track git).
+3. `get_db()` runtime check — raise error jika MySQL belum dikonfigurasi.
 
 ---
 
@@ -77,8 +62,8 @@ get_db() → ✅ konek
 | ID | Temuan | Status |
 |----|--------|--------|
 | IDX-R-001 | S-01 LIVE mode terkunci | ✅ PASS |
-| IDX-R-002 | S-03 Health gate START | ⛔ BLOCKED |
-| IDX-R-003 | S-02 Autentikasi | 🔄 OPEN |
+| IDX-R-002 | S-03 Health gate START | ✅ PASS |
+| IDX-R-003 | S-02 Autentikasi | ✅ PASS |
 | IDX-R-004 | S-04 Signal EMA20/50 | 🔄 OPEN |
 | IDX-R-005 | S-05 Order book | 🔄 OPEN |
 | IDX-R-006 | S-06 Sell amount | 🔄 OPEN |

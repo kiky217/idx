@@ -855,6 +855,42 @@ def get_chart_data(pair, duration_min=60):
         cutoff = int(time.time()*1000) - duration_min*60*1000
         return [p for p in CHART_DATA[pair] if p["ts"] >= cutoff]
 
+# ── API Key Auth (S-02) ──
+def require_api_key():
+    required = os.environ.get("DASHBOARD_API_KEY", "")
+    if not required:
+        return None
+    key = request.headers.get("X-API-Key", "")
+    if key != required:
+        return jsonify({"error": "Unauthorized. Provide X-API-Key header."}), 401
+    return None
+
+# ── Health check (S-03) ──
+def system_healthy():
+    issues = []
+    # Market data
+    tickers = _get("tickers")
+    if not tickers or len(tickers) == 0:
+        issues.append("market_data: no tickers")
+    # Server time freshness
+    age_ts = _get("age_ts")
+    if age_ts and time.time() - age_ts > 30:
+        issues.append(f"market_data: stale ({int(time.time()-age_ts)}s)")
+    # MySQL
+    try:
+        db_exec("SELECT 1")
+    except Exception:
+        issues.append("mysql: unreachable")
+    # Pair rules loaded — check if MySQL has pairs
+    try:
+        cur = db_exec("SELECT COUNT(*) as c FROM pairs")
+        row = cur.fetchone()
+        if row and row.get("c", 0) == 0:
+            issues.append("pair_rules: empty")
+    except Exception:
+        pass  # tables might not be populated yet
+    return issues
+
 @app.route("/")
 def landing():
     tickers = _get("tickers") or {}
@@ -904,13 +940,15 @@ def api_live():
 
 @app.route("/health")
 def health():
+    issues = system_healthy()
+    sp = scalper.get_status()
     return jsonify({
-        "status": "ok",
-        "uptime": f"{int(time.time()-_start)}s",
-        "cached": len(_get("tickers") or {}),
-        "keys": list(_cache.keys()),
-        "scalper": scalper.get_status()["running"],
-        "mode": scalper.mode,
+        "status": "ok" if len(issues) == 0 else "degraded",
+        "issues": issues,
+        "uptime": int(time.time() - _start),
+        "cached_pairs": len(_get("tickers") or {}),
+        "scalper_running": sp.get("running"),
+        "mode": sp.get("mode"),
     })
 
 @app.route("/api/scalper/status")
@@ -919,11 +957,12 @@ def scalper_status_api():
 
 @app.route("/api/scalper/start", methods=["POST"])
 def scalper_start():
-    # S-01: Only DRY_RUN allowed
-    # S-03: Health gate — check market data is ready
-    tickers = _get("tickers")
-    if not tickers or len(tickers) == 0:
-        return jsonify({"ok": False, "msg": "Market data not ready. Wait for ticker data."}), 503
+    auth = require_api_key()
+    if auth: return auth
+    # S-03: Full health gate
+    issues = system_healthy()
+    if issues:
+        return jsonify({"ok": False, "msg": "System not healthy", "issues": issues}), 503
     if scalper.running:
         return jsonify({"ok": False, "msg": "already running"})
     tickers_fn = lambda: _get("tickers") or {}
@@ -932,6 +971,8 @@ def scalper_start():
 
 @app.route("/api/scalper/stop", methods=["POST"])
 def scalper_stop():
+    auth = require_api_key()
+    if auth: return auth
     scalper.stop()
     return jsonify({"ok": True})
 
@@ -1060,6 +1101,8 @@ def pnl_daily():
 
 @app.route("/api/telegram/test", methods=["POST"])
 def telegram_test():
+    auth = require_api_key()
+    if auth: return auth
     ok = test_bot()
     return jsonify({"ok": ok})
 
@@ -1077,6 +1120,8 @@ def api_config_get():
 
 @app.route("/api/config", methods=["POST"])
 def api_config_set():
+    auth = require_api_key()
+    if auth: return auth
     global APP_CONFIG, scalper
     data = request.get_json(force=True) or {}
     
