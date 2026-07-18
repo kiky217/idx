@@ -856,14 +856,15 @@ def get_chart_data(pair, duration_min=60):
         cutoff = int(time.time()*1000) - duration_min*60*1000
         return [p for p in CHART_DATA[pair] if p["ts"] >= cutoff]
 
-# ── API Key Auth (S-02) ──
+# ── API Key Auth (S-02/R-003) ──
+AUTH_ENABLED = os.environ.get("DASHBOARD_API_KEY", "")
+
 def require_api_key():
-    required = os.environ.get("DASHBOARD_API_KEY", "")
-    if not required:
-        return None
+    if not AUTH_ENABLED:
+        return jsonify({"error": "Authentication not configured. Set DASHBOARD_API_KEY in environment."}), 503
     key = request.headers.get("X-API-Key", "")
-    if key != required:
-        return jsonify({"error": "Unauthorized. Provide X-API-Key header."}), 401
+    if key != AUTH_ENABLED:
+        return jsonify({"error": "Unauthorized. Invalid or missing X-API-Key header."}), 401
     return None
 
 # ── Health check (S-03) ──
@@ -1002,6 +1003,8 @@ def ticker(pair):
 
 @app.route("/api/portfolio")
 def api_portfolio():
+    auth = require_api_key()
+    if auth: return auth
     info = tapi_request("getInfo")
     if not info:
         return jsonify({"error": "TAPI failed"}), 502
@@ -1086,16 +1089,22 @@ def api_portfolio():
 
 @app.route("/api/pnl/summary")
 def pnl_summary():
+    auth = require_api_key()
+    if auth: return auth
     return jsonify(pnl_storage.get_summary())
 
 @app.route("/api/pnl/trades")
 def pnl_trades():
+    auth = require_api_key()
+    if auth: return auth
     pair = request.args.get("pair")
     limit = int(request.args.get("limit", 50))
     return jsonify(pnl_storage.get_trades(limit=limit, pair=pair))
 
 @app.route("/api/pnl/daily")
 def pnl_daily():
+    auth = require_api_key()
+    if auth: return auth
     days = int(request.args.get("days", 30))
     return jsonify(pnl_storage.get_daily_pnl(days=days))
 
