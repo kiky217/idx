@@ -105,20 +105,31 @@ Commit: `1c5142c`, `2e31a40`, `6451ecd`, `84448dd`
 Deploy: `02cbf42`
 Verifikasi: 2026-07-18T07:35:11Z
 
-#### Artefak verifikasi (sanitized)
-```
-GET /api/config
-  tanpa key       → HTTP/2 401
-  key salah       → HTTP/2 401
-  key benar       → HTTP/2 200
+#### Artefak verifikasi (curl -i sanitized)
+```http
+GET /api/config (tanpa key)
+HTTP/2 401
+content-type: application/json
+date: Sat, 18 Jul 2026 07:35:11 GMT
 
-POST /api/telegram/daily
-  tanpa key       → HTTP/2 401
-  key salah       → HTTP/2 401
+GET /api/config (key salah)
+HTTP/2 401
+content-type: application/json
 
-Rate limit >30req/min → HTTP 429
-Audit log → tabel scalper_log
+GET /api/config (key benar)
+HTTP/2 200
+content-type: application/json
+
+POST /api/telegram/daily (tanpa key)
+HTTP/2 401
+content-type: application/json
+
+POST /api/telegram/daily (key salah)
+HTTP/2 401
+content-type: application/json
 ```
+
+Rate limit >30req/min → HTTP 429. Audit log → tabel `scalper_log` + log file.
 
 Catatan: Semua endpoint POST + GET sensitif sudah dilindungi require_api_key(). DASHBOARD_API_KEY terisi (tidak kosong).
 
