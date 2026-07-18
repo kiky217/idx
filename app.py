@@ -969,6 +969,7 @@ def system_healthy():
             issues.append(f"pair_rules: error ({e})")
     
     # R-002: Recovery order check — any open orders?
+    recovery_ok = True
     try:
         open_orders_raw = tapi_request("openOrders")
         if open_orders_raw and isinstance(open_orders_raw, dict):
@@ -976,8 +977,12 @@ def system_healthy():
             total_orders = sum(len(v) if isinstance(v, list) else 0 for v in orders_dict.values())
             if total_orders > 0:
                 issues.append(f"recovery: {total_orders} open order(s) pending")
-    except Exception:
-        pass  # non-critical for health
+        else:
+            issues.append("recovery: openOrders API returned invalid response (fail-closed)")
+            recovery_ok = False
+    except Exception as e:
+        issues.append(f"recovery: openOrders API failed ({e}) — fail-closed")
+        recovery_ok = False
     
     return issues
 

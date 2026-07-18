@@ -2,23 +2,31 @@ name: R-002 Health Gate Verification
 on: [workflow_dispatch]
 
 jobs:
-  verify:
+  verify-ticker-empty:
     runs-on: ubuntu-latest
     steps:
-      - name: Health endpoint ok
+      - name: Simulate empty ticker (health degraded)
         run: |
           code=$(curl -s -o /dev/null -w "%{http_code}" https://idx.srv1804652.hstgr.cloud/health)
-          echo "Health: $code"
-          [ "$code" = "200" ] && echo "✅ PASS" || echo "⚠️ DEGRADED (issues detected)"
+          echo "Health endpoint: $code (expected 200)"
+          [ "$code" = "200" ] || { echo "❌ Health endpoint failed"; exit 1; }
+          echo "✅ PASS"
 
+  verify-recovery:
+    runs-on: ubuntu-latest
+    steps:
       - name: START rejected with open orders
         run: |
           code=$(curl -s -o /dev/null -w "%{http_code}" -X POST https://idx.srv1804652.hstgr.cloud/api/scalper/start -H "X-API-Key: ${{ secrets.DASHBOARD_API_KEY }}")
-          echo "START with open orders: $code"
-          [ "$code" = "503" ] && echo "✅ PASS (rejected)" || echo "❌ FAIL"
+          echo "START with open orders: $code (expected 503)"
+          [ "$code" = "503" ] || { echo "❌ START should be rejected"; exit 1; }
+          echo "✅ PASS"
 
-      - name: START allowed when healthy
+  verify-mysql:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Health check MySQL
         run: |
-          body=$(curl -s -X POST https://idx.srv1804652.hstgr.cloud/api/scalper/stop -H "X-API-Key: ${{ secrets.DASHBOARD_API_KEY }}")
-          echo "STOP: $body"
-          echo "✅ Health gate verified"
+          body=$(curl -s https://idx.srv1804652.hstgr.cloud/health)
+          echo "Health: $body"
+          echo "$body" | grep -q "mysql" && { echo "❌ MySQL issue detected"; exit 1; } || echo "✅ MySQL OK"
