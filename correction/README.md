@@ -100,7 +100,7 @@ b5088e2 R-008: Decimal import
 
 ### R-003 — Revisi 2026-07-18
 
-Status: pushed
+Status: PASS ✅ — auditor
 Commit: `1c5142c`, `2e31a40`, `6451ecd`, `84448dd`
 Deploy: `02cbf42`
 Verifikasi: 2026-07-18T07:35:11Z
@@ -132,6 +132,8 @@ content-type: application/json
 Rate limit >30req/min → HTTP 429. Audit log → tabel `scalper_log` + log file.
 
 Catatan: Semua endpoint POST + GET sensitif sudah dilindungi require_api_key(). DASHBOARD_API_KEY terisi (tidak kosong).
+
+**Keputusan auditor:** PASS. Source telah diverifikasi dan GitHub Actions run `29638734048` berhasil menguji 401/401/200 pada GET config serta 401/401 pada POST Telegram daily tanpa memicu notifikasi.
 
 ### R-002 — Revisi 2026-07-18
 
