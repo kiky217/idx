@@ -919,6 +919,18 @@ def system_healthy():
     age_ts = _get("age_ts")
     if age_ts and time.time() - age_ts > 30:
         issues.append(f"market_data: stale ({int(time.time()-age_ts)}s)")
+    elif not age_ts:
+        issues.append("market_data: never_fetched")
+    
+    # R-002: Timestamp — check Indodax server time vs local
+    server_time = _get("server_time")
+    if server_time:
+        ts = server_time.get("ts", 0)
+        local = int(time.time())
+        diff = abs(local - ts)
+        if diff > 120:
+            issues.append(f"clock_skew: {diff}s between local and Indodax")
+    
     # MySQL
     try:
         db_exec("SELECT 1")
@@ -935,6 +947,18 @@ def system_healthy():
                 issues.append("pair_rules: empty")
         except Exception as e:
             issues.append(f"pair_rules: error ({e})")
+    
+    # R-002: Recovery order check — any open orders?
+    try:
+        open_orders_raw = tapi_request("openOrders")
+        if open_orders_raw and isinstance(open_orders_raw, dict):
+            orders_dict = open_orders_raw.get("orders", {})
+            total_orders = sum(len(v) if isinstance(v, list) else 0 for v in orders_dict.values())
+            if total_orders > 0:
+                issues.append(f"recovery: {total_orders} open order(s) pending")
+    except Exception:
+        pass  # non-critical for health
+    
     return issues
 
 @app.route("/")
