@@ -32,9 +32,32 @@
 **Ket: [AUDIT-LOCKED / JANGAN HAPUS]**
 - R-013 (Candle chart) butuh WebSocket aktif + candle engine. Struktur `gateway.py` sudah siap.
 - Semua file terdampak sudah di-push ke `master` branch.
+- R-016 rotasi kredensial MySQL — **manual, perlu Tuan ganti password**.
+
+## Bukti Uji — R-002 Health Gate
+
+```bash
+# Health check endpoint
+curl /health
+# → {"status":"ok","issues":[],"cached_pairs":100,...}
+
+# START ditolak kalo data belum siap (simulasi: sebelum ticker terisi)
+curl -X POST /api/scalper/start -H "X-API-Key: ..."
+# → {"ok":false,"msg":"System not healthy","issues":["market_data: no tickers"]}
+
+# START sukses setelah data siap
+curl -X POST /api/scalper/start -H "X-API-Key: ..."
+# → {"mode":"DRY_RUN","ok":true}
+```
+
+## Re-audit 2026-07-18 — R-003 Rate Limit + Audit
+
+Rate limiter: 30 req/min per IP. Audit log disimpan ke tabel `scalper_log` + log file.
+Commit: `1c5142c`
 
 ## Commit Log — [AUDIT-LOCKED / JANGAN HAPUS]
 ```
+1c5142c R-003: rate limiting + audit actor logging
 ba4a664 R-014: single gunicorn worker
 a5a1543 R-007/R-011/R-012: risk persistence + calendar reset + exposure
 21da069 R-015: WS token env var
