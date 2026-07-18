@@ -6,7 +6,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Run health gate tests
+      - name: Install dependencies
+        run: pip install flask pymysql requests -q
+      - name: Run unit tests
         env:
           DASHBOARD_API_KEY: ${{ secrets.DASHBOARD_API_KEY }}
         run: |
