@@ -14,37 +14,28 @@
 
 ### Instruksi auditor
 1. ✅ Tambah `.env` ke `.gitignore`
-2. ❌ Rotasi kredensial MySQL (manual — Tuan harus ganti password di MySQL)
-3. ✅ Pastikan startup gagal jika env var tidak ada
-4. ✅ Perbaiki `get_db()` — validasi lalu `return pymysql.connect(**DB_CONFIG)`
-5. ✅ Bukti scan secret
+2. ❌ **Rotasi kredensial** — manual. Tuan harus ganti password MySQL, update `.env`
+3. ✅ Startup gagal jika env var tidak ada (fail-closed)
+4. ✅ `get_db()` — validasi lalu `return pymysql.connect(**DB_CONFIG)`
+5. ✅ Scan secret: `grep -r "idx2026@" app.py` → No match
 
 ### Bukti uji
 ```bash
-# 1. Tanpa env var → RuntimeError
-# 2. Dengan env var → konek
+# Health check
 curl /health
-# → MySQL reachable ✅
+# → MySQL reachable ✅, 510 pairs seeded ✅
 
-# 3. Seed pairs
-# → 510 pairs loaded ✅
-
-# 4. Secret scan
-grep -r "idx2026@" app.py
-# → No match ✅
+# Secret scan
+grep "idx2026@" app.py
+# → (no output) ✅
 ```
-
-### Catatan
-- `.env` SUDAH di `.gitignore` — tidak akan ter-push
-- Kredensial (`IDX_DB_USER=idx2026@`, `IDX_DB_PASSWORD=idx2026@`) hanya di `.env`
-- **Rotasi manual:** Tuan perlu ganti password MySQL, update `.env`, restart container
 
 ---
 
 ## IDX-R-003 — Autentikasi
 
 **Status:** OPEN
-**Catatan:** Menunggu R-016 selesai
+**Catatan:** `DASHBOARD_API_KEY` wajib diisi. Jika kosong, endpoint kontrol harus 503.
 
 ---
 
@@ -66,6 +57,6 @@ grep -r "idx2026@" app.py
 |----|--------|--------|
 | IDX-R-016 | Kredensial MySQL | 🔄 OPEN (re-audit) |
 | IDX-R-003 | Autentikasi | 🔄 OPEN |
-| IDX-R-001 | LIVE mode | 🔄 OPEN |
+| IDX-R-001 | LIVE mode terkunci | 🔄 OPEN |
 | IDX-R-002 | Health gate | 🔄 OPEN |
 | IDX-R-004–015 | (sisa) | 🔄 OPEN |
