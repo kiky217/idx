@@ -1,0 +1,5 @@
+flask>=3,<4
+requests>=2,<3
+gunicorn>=21,<23
+pymysql>=1,<2
+websockets>=12,<14

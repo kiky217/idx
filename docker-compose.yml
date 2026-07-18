@@ -1,0 +1,22 @@
+services:
+  idx:
+    build: .
+    image: idx:latest
+    container_name: idx
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./data:/app/data
+    networks:
+      - traefik_internal_net
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.idx.rule=Host(`idx.srv1804652.hstgr.cloud`)
+      - traefik.http.routers.idx.entrypoints=websecure
+      - traefik.http.routers.idx.tls.certresolver=letsencrypt
+      - traefik.http.services.idx.loadbalancer.server.port=8925
+
+networks:
+  traefik_internal_net:
+    external: true
+
