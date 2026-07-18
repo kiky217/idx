@@ -1024,6 +1024,8 @@ def scalper_stop():
 
 @app.route("/api/scalper/trades")
 def scalper_trades():
+    auth = require_api_key()
+    if auth: return auth
     return jsonify(scalper.executor.get_trade_log(50))
 
 @app.route("/api/tickers")
@@ -1170,6 +1172,8 @@ def telegram_daily_route():
 
 @app.route("/api/config", methods=["GET"])
 def api_config_get():
+    auth = require_api_key()
+    if auth: return auth
     return jsonify(APP_CONFIG)
 
 @app.route("/api/config", methods=["POST"])
