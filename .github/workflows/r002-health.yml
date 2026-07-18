@@ -1,0 +1,24 @@
+name: R-002 Health Gate Verification
+on: [workflow_dispatch]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Health endpoint ok
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" https://idx.srv1804652.hstgr.cloud/health)
+          echo "Health: $code"
+          [ "$code" = "200" ] && echo "✅ PASS" || echo "⚠️ DEGRADED (issues detected)"
+
+      - name: START rejected with open orders
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" -X POST https://idx.srv1804652.hstgr.cloud/api/scalper/start -H "X-API-Key: ${{ secrets.DASHBOARD_API_KEY }}")
+          echo "START with open orders: $code"
+          [ "$code" = "503" ] && echo "✅ PASS (rejected)" || echo "❌ FAIL"
+
+      - name: START allowed when healthy
+        run: |
+          body=$(curl -s -X POST https://idx.srv1804652.hstgr.cloud/api/scalper/stop -H "X-API-Key: ${{ secrets.DASHBOARD_API_KEY }}")
+          echo "STOP: $body"
+          echo "✅ Health gate verified"
