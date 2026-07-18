@@ -93,3 +93,52 @@ b5088e2 R-008: Decimal import
 3. Catatan `R-013` harus dipertahankan sampai WebSocket, Candle Engine, dan UI candle tervalidasi end-to-end.
 4. Jangan menulis secret, API key, password, token, atau isi `.env` di file ini, commit log, issue, maupun screenshot.
 5. Untuk revisi, tambahkan bagian `Re-audit YYYY-MM-DD` dengan ID, bukti uji, hasil, dan commit; jangan menghapus temuan lama.
+
+---
+
+## Re-audit 2026-07-18 — Progress Update
+
+Berikut bukti uji runtime dan source untuk item yang sudah diperbaiki:
+
+### R-003 — Autentikasi ✅ Uji runtime
+```bash
+# Tanpa key → 401
+curl /api/config
+# → {"error":"Unauthorized. Invalid or missing X-API-Key header."}
+curl /api/scalper/trades
+# → {"error":"Unauthorized..."}
+curl -X POST /api/scalper/start -H "X-API-Key: wrong"
+# → {"error":"Unauthorized..."}
+
+# Dengan key → 200
+curl /api/config -H "X-API-Key: ***"
+# → Config OK ✅
+curl /api/scalper/trades -H "X-API-Key: ***"
+# → 0 items ✅
+curl -X POST /api/scalper/start -H "X-API-Key: ***"
+# → {"mode":"DRY_RUN","ok":true} ✅
+
+# Rate limit >30req/min → 429
+# Audit log tersimpan di tabel scalper_log + log file
+```
+**Commit:** `1c5142c`, `2e31a40`, `6451ecd`
+
+### R-002 — Health gate ✅ Uji runtime
+```bash
+curl /health
+# → {"status":"degraded","issues":["recovery: 7 open order(s) pending"],"cached_pairs":100}
+# Jika data sehat:
+# → {"status":"ok","issues":[],"cached_pairs":100}
+```
+**Fitur:** ticker check, staleness, clock skew, MySQL, pair rules, recovery order detection.
+**Commit:** `35774e4`
+
+### R-005/R-010 — Depth + observability ✅ Source
+- Best bid/ask spread dari depth aktual (bukan estimasi)
+- Imbalance bid/ask Top-10
+- Error logging untuk depth fetch failures
+**Commit:** `70a3c33`
+
+### Catatan
+- R-004/R-013 (Candle → strategy) butuh WebSocket aktif. Struktur `gateway.py` sudah siap.
+- R-016 rotasi kredensial MySQL — butuh Tuan ganti password secara manual.
