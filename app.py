@@ -867,13 +867,45 @@ def get_chart_data(pair, duration_min=60):
 
 # ── API Key Auth (S-02/R-003) ──
 AUTH_ENABLED = os.environ.get("DASHBOARD_API_KEY", "")
+_ratelimit_store = {}  # ip -> [timestamps]
+RATELIMIT_WINDOW = 60  # seconds
+RATELIMIT_MAX = 30     # max requests per window
+
+def _audit_log(action: str, detail: str = "", ip: str = ""):
+    """R-003: Audit actor logging."""
+    log.info(f"[AUDIT] action={action} ip={ip} detail={detail}")
+    try:
+        db_insert("scalper_log", {
+            "event": f"audit_{action}",
+            "detail": json.dumps({"detail": detail, "ip": ip, "ts": time.time()}),
+        })
+    except Exception:
+        pass  # audit log failure should not block
+
+def _check_rate_limit(ip: str) -> bool:
+    """R-003: Simple rate limiter — 30 req/min per IP."""
+    now = time.time()
+    if ip not in _ratelimit_store:
+        _ratelimit_store[ip] = []
+    # clean old entries
+    _ratelimit_store[ip] = [t for t in _ratelimit_store[ip] if now - t < RATELIMIT_WINDOW]
+    if len(_ratelimit_store[ip]) >= RATELIMIT_MAX:
+        return False  # rate limited
+    _ratelimit_store[ip].append(now)
+    return True
 
 def require_api_key():
+    ip = request.remote_addr or "unknown"
+    if not _check_rate_limit(ip):
+        _audit_log("rate_limit", f"ip={ip}", ip)
+        return jsonify({"error": "Rate limit exceeded. Try again later."}), 429
     if not AUTH_ENABLED:
         return jsonify({"error": "Authentication not configured. Set DASHBOARD_API_KEY in environment."}), 503
     key = request.headers.get("X-API-Key", "")
     if key != AUTH_ENABLED:
+        _audit_log("auth_fail", f"ip={ip}", ip)
         return jsonify({"error": "Unauthorized. Invalid or missing X-API-Key header."}), 401
+    _audit_log("auth_ok", f"endpoint={request.path}", ip)
     return None
 
 # ── Health check (S-03) ──
