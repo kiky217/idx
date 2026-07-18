@@ -2,31 +2,12 @@ name: R-002 Health Gate Verification
 on: [workflow_dispatch]
 
 jobs:
-  verify-ticker-empty:
+  test:
     runs-on: ubuntu-latest
     steps:
-      - name: Simulate empty ticker (health degraded)
+      - uses: actions/checkout@v4
+      - name: Run health gate tests
+        env:
+          TEST_API_KEY: ${{ secrets.DASHBOARD_API_KEY }}
         run: |
-          code=$(curl -s -o /dev/null -w "%{http_code}" https://idx.srv1804652.hstgr.cloud/health)
-          echo "Health endpoint: $code (expected 200)"
-          [ "$code" = "200" ] || { echo "❌ Health endpoint failed"; exit 1; }
-          echo "✅ PASS"
-
-  verify-recovery:
-    runs-on: ubuntu-latest
-    steps:
-      - name: START rejected with open orders
-        run: |
-          code=$(curl -s -o /dev/null -w "%{http_code}" -X POST https://idx.srv1804652.hstgr.cloud/api/scalper/start -H "X-API-Key: ${{ secrets.DASHBOARD_API_KEY }}")
-          echo "START with open orders: $code (expected 503)"
-          [ "$code" = "503" ] || { echo "❌ START should be rejected"; exit 1; }
-          echo "✅ PASS"
-
-  verify-mysql:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Health check MySQL
-        run: |
-          body=$(curl -s https://idx.srv1804652.hstgr.cloud/health)
-          echo "Health: $body"
-          echo "$body" | grep -q "mysql" && { echo "❌ MySQL issue detected"; exit 1; } || echo "✅ MySQL OK"
+          python3 docker/idx/tests/test_health_gate.py
