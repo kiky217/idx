@@ -15,7 +15,7 @@ Semua temuan audit di-track di [`correction/README.md`](correction/README.md).
 |----|--------|--------|
 | R-001 | LIVE mode terkunci | 🔄 pushed |
 | R-002 | Health gate | 🔄 pushed |
-| R-003 | Autentikasi + rate limit | 🔄 pushed |
+| R-003 | Autentikasi + rate limit | 🔄 pushed · [✅ Workflow](https://github.com/kiky217/idx/actions/runs/29638734048) |
 | R-004 | Signal v2 (EMA20/50) | 🔄 pushed |
 | R-005 | Order book spread | 🔄 pushed |
 | R-006 | Sell amount eksplisit | 🔄 pushed |
