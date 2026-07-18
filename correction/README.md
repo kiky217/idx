@@ -199,6 +199,20 @@ Catatan: Health gate sudah mencakup semua kondisi yang diminta auditor.
 2. satu kondisi sehat → START mengembalikan 200 dalam dry-run/staging, lalu cleanup internal terkontrol;
 3. workflow fail bila satu assertion gagal.
 
+
+**Unit suite re-audit — 18 Juli 2026:** Status tetap **FAIL**.
+
+1. Test memasukkan `/docker/idx` ke `sys.path`, tetapi repository tidak memiliki `docker/idx/app.py`; `app.py` berada di root. Pada GitHub runner, `import app` tidak memiliki path yang benar seperti source saat ini.
+2. Suite belum menguji pair rules kosong/error.
+3. Suite hanya memanggil `system_healthy()`; belum menguji route `POST /api/scalper/start` dengan Flask test client untuk memastikan 503 pada setiap issue dan 200 pada fixture sehat.
+4. Link/log run 8/8 yang menguji commit unit-test belum tercatat pada README.
+
+**Instruksi [JANGAN HAPUS]:**
+- Gunakan `Path(__file__).resolve().parents[3]` atau PYTHONPATH workspace untuk import root project; jangan pakai path absolut container yang tidak ada di runner.
+- Tambahkan fixture pair-rules empty/error.
+- Tambahkan route-level test client dengan dependency mocks dan pastikan tidak memulai background thread/order.
+- Jalankan workflow, simpan link run sukses, dan baru minta re-audit.
+
 ### R-005/R-010 — Revisi 2026-07-18
 
 Status: pushed
