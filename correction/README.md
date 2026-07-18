@@ -101,14 +101,15 @@ b5088e2 R-008: Decimal import
 ### R-003 — Revisi 2026-07-18
 
 Status: pushed
-Commit: `1c5142c`, `2e31a40`, `6451ecd`
+Commit: `1c5142c`, `2e31a40`, `6451ecd`, `84448dd`
 Bukti uji:
 - tanpa API key → 401
 - API key salah → 401
 - API key benar → 200
 - Rate limit >30req/min → 429
 - Audit log tersimpan di tabel `scalper_log`
-Catatan: Endpoint GET /api/config, GET /api/scalper/trades, semua POST sudah dilindungi.
+- `POST /api/telegram/daily`: tanpa key 401, key salah 401, key benar `{"ok":null}`
+Catatan: Semua endpoint POST + GET sensitif sudah dilindungi `require_api_key()`.
 
 ### R-002 — Revisi 2026-07-18
 
