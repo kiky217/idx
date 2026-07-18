@@ -12,21 +12,21 @@
 
 | ID | Temuan | File | Status |
 |----|--------|------|--------|
-| R-016 | Kredensial MySQL | `.env`, `app.py`, `.gitignore` | ✅ PASS |
-| R-003 | Autentikasi | `app.py`, `.env` | ✅ PASS |
-| R-001 | LIVE gate | `app.py`, `scalper.py` | ✅ PASS |
-| R-002 | Health gate | `app.py` | ✅ PASS |
-| R-006 | Sell amount | `scalper.py` | ✅ PASS |
-| R-008 | Decimal | `executor.py`, `indodax_signal.py` | ✅ PASS |
-| R-007 | State persistence | `risk.py` | ✅ PASS |
-| R-011 | Daily reset (calendar) | `risk.py` | ✅ PASS |
-| R-012 | Exposure calc | `risk.py` | ✅ PASS |
-| R-004 | Signal v2 (EMA20/50) | `indodax_signal.py` | ✅ PASS |
-| R-005 | Order book spread | `indodax_signal.py` | ✅ PASS |
-| R-009 | Pair ranking (volume) | `app.py` | ✅ PASS |
-| R-010 | Depth watchlist | `app.py` | ✅ PASS |
-| R-015 | WS token env var | `gateway.py` | ✅ PASS |
-| R-014 | Single gunicorn worker | `Dockerfile` | ✅ PASS |
+| R-016 | Kredensial MySQL | `.env`, `app.py`, `.gitignore` | 🔄 pushed |
+| R-003 | Autentikasi | `app.py`, `.env` | 🔄 pushed |
+| R-001 | LIVE gate | `app.py`, `scalper.py` | 🔄 pushed |
+| R-002 | Health gate | `app.py` | 🔄 pushed |
+| R-006 | Sell amount | `scalper.py` | 🔄 pushed |
+| R-008 | Decimal | `executor.py`, `indodax_signal.py` | 🔄 pushed |
+| R-007 | State persistence | `risk.py` | 🔄 pushed |
+| R-011 | Daily reset (calendar) | `risk.py` | 🔄 pushed |
+| R-012 | Exposure calc | `risk.py` | 🔄 pushed |
+| R-004 | Signal v2 (EMA20/50) | `indodax_signal.py` | 🔄 pushed |
+| R-005 | Order book spread | `indodax_signal.py` | 🔄 pushed |
+| R-009 | Pair ranking (volume) | `app.py` | 🔄 pushed |
+| R-010 | Depth watchlist | `app.py` | 🔄 pushed |
+| R-015 | WS token env var | `gateway.py` | 🔄 pushed |
+| R-014 | Single gunicorn worker | `Dockerfile` | 🔄 pushed |
 | R-013 | Candle chart | UI | 🔄 partial |
 
 **Ket: [AUDIT-LOCKED / JANGAN HAPUS]**
