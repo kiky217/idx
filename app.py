@@ -110,15 +110,35 @@ def _fetch_all():
             if tickers:
                 _set("tickers", tickers)
                 _set("age_ts", time.time())
-                # R-010: Fetch depth for top pairs by volume, not just owned BTC
+                # R-010: Fetch depth for top pairs by volume
                 top3 = top_pairs[:3]
                 for pk in top3:
                     try:
                         d = requests.get(f"{INDODAX_BASE}/api/depth/{pk}", timeout=5)
                         if d.ok:
-                            _set(f"depth_{pk}", d.json())
-                    except:
-                        pass
+                            depth_data = d.json()
+                            _set(f"depth_{pk}", depth_data)
+                            # R-010: Extract best bid/ask and imbalance
+                            if "buy" in depth_data and "sell" in depth_data:
+                                buys = depth_data.get("buy", [])
+                                sells = depth_data.get("sell", [])
+                                if buys and sells:
+                                    best_bid = float(buys[0][0]) if isinstance(buys[0], (list, tuple)) else 0
+                                    best_ask = float(sells[0][0]) if isinstance(sells[0], (list, tuple)) else 0
+                                    if best_bid > 0 and best_ask > 0:
+                                        bid_vol = sum(float(b[1]) for b in buys[:10] if isinstance(b, (list, tuple))) if buys else 0
+                                        ask_vol = sum(float(s[1]) for s in sells[:10] if isinstance(s, (list, tuple))) if sells else 0
+                                        imbalance = (bid_vol - ask_vol) / max(bid_vol + ask_vol, 1)
+                                        _set(f"depth_metrics_{pk}", {
+                                            "best_bid": best_bid, "best_ask": best_ask,
+                                            "spread_pct": (best_ask - best_bid) / best_bid * 100,
+                                            "imbalance": round(imbalance, 4),
+                                            "ts": time.time()
+                                        })
+                        else:
+                            log.warning(f"[depth] {pk} HTTP {d.status_code}")
+                    except Exception as e:
+                        log.warning(f"[depth] {pk} error: {e}")
                 for pair, data in tickers.items():
                     last = float(data.get("last", 0))
                     if last > 0:
