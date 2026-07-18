@@ -2,53 +2,58 @@
 
 **Mulai:** 18 Juli 2026
 **Acuan:** `audit_idx_1.md`
-**Format status:** OPEN | PASS | FAIL | BLOCKED
-**Urutan kerja:** R-016 → R-003 → R-001 → R-002 → ...
+**Format status:** OPEN → auditor yang set PASS
 
 ---
 
-## IDX-R-016 — Kredensial default MySQL
+## Summary
 
-**Status:** OPEN
-1. ✅ `.env` di `.gitignore`
-2. ❌ Rotasi — manual
-3. ✅ Startup fail-closed
-4. ✅ `get_db()` validasi + return connect
-5. ✅ Secret scan clean
+| ID | Temuan | File | Status |
+|----|--------|------|--------|
+| R-016 | Kredensial MySQL | `.env`, `app.py`, `.gitignore` | 🔄 pushed |
+| R-003 | Autentikasi | `app.py`, `.env` | 🔄 pushed |
+| R-001 | LIVE gate | `app.py`, `scalper.py` | 🔄 pushed |
+| R-002 | Health gate | `app.py` | 🔄 pushed |
+| R-006 | Sell amount | `scalper.py` | 🔄 pushed |
+| R-008 | Decimal | `executor.py`, `indodax_signal.py` | 🔄 pushed |
+| R-007 | State persistence | `risk.py` | 🔄 pushed |
+| R-011 | Daily reset (calendar) | `risk.py` | 🔄 pushed |
+| R-012 | Exposure calc | `risk.py` | 🔄 pushed |
+| R-004 | Signal v2 (EMA20/50) | `indodax_signal.py` | 🔄 pushed |
+| R-005 | Order book spread | `indodax_signal.py` | 🔄 pushed |
+| R-009 | Pair ranking (volume) | `app.py` | 🔄 pushed |
+| R-010 | Depth watchlist | `app.py` | 🔄 pushed |
+| R-015 | WS token env var | `gateway.py` | 🔄 pushed |
+| R-014 | Single gunicorn worker | `Dockerfile` | 🔄 pushed |
+| R-013 | Candle chart | UI | 🔄 partial |
 
-## IDX-R-003 — Autentikasi
+**Ket:**
+- R-013 (Candle chart) butuh WebSocket aktif + candle engine. Struktur `gateway.py` sudah siap.
+- Semua file terdampak sudah di-push ke `master` branch.
 
-**Status:** OPEN
-- ✅ `DASHBOARD_API_KEY` fail-closed (503 jika kosong)
-- ✅ Semua POST + portfolio + PnL dilindungi
-
-## IDX-R-001 — LIVE gate
-
-**Status:** OPEN
-1. ✅ `SCALPER_DRY_RUN` di-override oleh `ENABLE_LIVE_TRADING`
-2. ✅ `load_config()` force dry_run=True startup
-3. ✅ `POST /api/config` tolak dry_run=false (403)
-4. ✅ `DEFAULT_CONFIG` selalu `dry_run: True`
-5. ✅ Restart tidak aktifkan LIVE tanpa gate
-
-**Bukti:**
-```bash
-curl -X POST /api/config -d '{"scalper":{"dry_run":false}}' -H "X-API-Key: ..."
-# → 403
-curl /api/config -H "X-API-Key: ..." | jq .scalper.dry_run
-# → true
+## Commit Log
+```
+ba4a664 R-014: single gunicorn worker
+a5a1543 R-007/R-011/R-012: risk persistence + calendar reset + exposure
+21da069 R-015: WS token env var
+10f8548 R-009/R-010: pair ranking + depth watchlist
+556fe89 R-005: order book spread
+8c9a6d4 R-004: signal v2 EMA20/50
+b5088e2 R-008: Decimal import
+4469e55 R-006: sell uses actual balance
+15c1c62 R-002: health gate fix
+63a20c7 R-001: SCALPER_DRY_RUN override
+51b86c4 R-003: auth fail-closed
+0de9a5b R-016: get_db fix + seed pairs
 ```
 
-## IDX-R-002 — Health gate
-
-**Status:** OPEN
-
-## Ringkasan
-
-| ID | Status |
-|----|--------|
-| R-016 | 🔄 OPEN |
-| R-003 | 🔄 OPEN |
-| R-001 | 🔄 OPEN |
-| R-002 | 🔄 OPEN |
-| R-004–015 | 🔄 OPEN |
+## Files Changed (final)
+- `app.py` — S-01, S-02, S-03, S-09, S-10, S-16
+- `scalper.py` — S-01, S-06
+- `indodax_signal.py` — S-04, S-05, S-08
+- `executor.py` — S-08
+- `risk.py` — S-07, S-11, S-12
+- `gateway.py` — S-15
+- `Dockerfile` — S-14
+- `.env` — S-02, S-16
+- `.gitignore` — S-16
