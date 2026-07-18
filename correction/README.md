@@ -1,27 +1,21 @@
 # Correction Log — IDX
 
 **Mulai:** 18 Juli 2026
-**Status:** Aktif
 **Acuan:** `audit_idx_1.md` (15 temuan S-01 s/d S-15)
+**Format status:** OPEN | PASS | FAIL | BLOCKED
 
 ---
 
-## S-01 — LIVE mode dikunci
+## IDX-R-001 (S-01) — LIVE mode dikunci
 
-**Status:** ✅ FIXED
+**Status:** PASS ✅
 **File:** `app.py`
-**Temuan:** Config API dapat mengubah `DRY_RUN` → `LIVE` melalui POST `/api/config` dengan `{"scalper":{"dry_run":false}}`.
+**Temuan:** Config API dapat mengubah `DRY_RUN` → `LIVE` melalui POST `/api/config`.
 
 **Koreksi:**
-1. Route `POST /api/config` sekarang menolak `dry_run=false` dengan HTTP 403 dan pesan error.
-2. LIVE mode hanya bisa diaktifkan via env var `ENABLE_LIVE_TRADING=true`.
-3. Dropdown Mode di Settings tab di-disable, hanya menampilkan "DRY RUN".
-
-**Kode:**
-```python
-if not sc["dry_run"]:
-    return jsonify({"error": "LIVE mode is disabled. Set ENABLE_LIVE_TRADING=true in environment to enable."}), 403
-```
+1. Route `POST /api/config` menolak `dry_run=false` dengan HTTP 403.
+2. LIVE mode hanya via env `ENABLE_LIVE_TRADING=true`.
+3. Dropdown Mode di Settings di-disable.
 
 **Verifikasi:**
 ```bash
@@ -31,63 +25,42 @@ curl -X POST /api/config -d '{"scalper":{"dry_run":false}}'
 
 ---
 
-## S-03 — Health gate START
+## IDX-R-002 (S-03) — Health gate START
 
-**Status:** ✅ FIXED
+**Status:** BLOCKED ⛔
 **File:** `app.py`
-**Temuan:** Tombol START aktif meski data market belum siap (pairs loading, ticker kosong).
+**Temuan:** Tombol START aktif meski data market belum siap.
 
-**Koreksi:**
-1. Route `POST /api/scalper/start` sekarang memeriksa `_get("tickers")` sebelum mengizinkan start.
-2. Jika ticker kosong, return 503 "Market data not ready".
-3. Frontend `updateHealthStatus()` mendisable tombol START selama `scan_count` masih undefined.
+**Koreksi parsial:**
+1. Route START cek `_get("tickers")` — return 503 kalo kosong.
+2. Frontend disable tombol selama data belum siap.
 
-**Kode:**
-```python
-tickers = _get("tickers")
-if not tickers or len(tickers) == 0:
-    return jsonify({"ok": False, "msg": "Market data not ready. Wait for ticker data."}), 503
-```
-
-**Verifikasi:**
-```bash
-curl -X POST /api/scalper/start
-# → 503 "Market data not ready" (kalo data belum siap)
-```
+**Butuh:** Prasyarat belum terpenuhi. Health gate masih terlalu sederhana (cuma cek ticker). Idealnya: pair rules loaded, MySQL/Redis healthy, stream aktif, tidak stale, tidak ada recovery order.
 
 ---
 
-## S-02 — Autentikasi (Belum)
+## IDX-R-003 (S-02) — Autentikasi
 
-**Status:** ❌ BELUM
-**Prioritas:** Berikutnya
-**Catatan:** Dashboard masih publik. Rencana: tambah API key header check untuk semua POST endpoint.
-
----
-
-## S-04 s/d S-15 (Belum)
-
-**Status:** ❌ BELUM
-**Catatan:** Menunggu prioritas setelah S-02 selesai.
+**Status:** OPEN
 
 ---
 
 ## Ringkasan
 
-| Temuan | Status | Prioritas |
-|--------|--------|-----------|
-| S-01 — LIVE mode terkunci | ✅ FIXED | 1 |
-| S-03 — Health gate START | ✅ FIXED | 3 |
-| S-02 — Auth | ❌ | 2 |
-| S-04 — Signal EMA20/50 | ❌ | 4 |
-| S-05 — Order book | ❌ | 5 |
-| S-06 — Sell amount | ❌ | 6 |
-| S-07 — State Redis | ❌ | 7 |
-| S-08 — Decimal | ❌ | 8 |
-| S-09 — 100 pair | ❌ | 9 |
-| S-10 — Depth | ❌ | 10 |
-| S-11 — Daily reset | ❌ | 11 |
-| S-12 — Exposure | ❌ | 12 |
-| S-13 — Candle chart | ❌ | 13 |
-| S-14 — Multi-worker | ❌ | 14 |
-| S-15 — WS token | ❌ | 15 |
+| ID | Temuan | Status |
+|----|--------|--------|
+| IDX-R-001 | S-01 LIVE mode terkunci | ✅ PASS |
+| IDX-R-002 | S-03 Health gate START | ⛔ BLOCKED |
+| IDX-R-003 | S-02 Autentikasi | 🔄 OPEN |
+| IDX-R-004 | S-04 Signal EMA20/50 | 🔄 OPEN |
+| IDX-R-005 | S-05 Order book | 🔄 OPEN |
+| IDX-R-006 | S-06 Sell amount | 🔄 OPEN |
+| IDX-R-007 | S-07 State Redis | 🔄 OPEN |
+| IDX-R-008 | S-08 Decimal | 🔄 OPEN |
+| IDX-R-009 | S-09 Pair ranking | 🔄 OPEN |
+| IDX-R-010 | S-10 Depth watchlist | 🔄 OPEN |
+| IDX-R-011 | S-11 Daily reset | 🔄 OPEN |
+| IDX-R-012 | S-12 Exposure total | 🔄 OPEN |
+| IDX-R-013 | S-13 Candle chart | 🔄 OPEN |
+| IDX-R-014 | S-14 Multi-worker | 🔄 OPEN |
+| IDX-R-015 | S-15 WS token | 🔄 OPEN |
