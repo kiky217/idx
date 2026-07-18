@@ -8,7 +8,9 @@
 
 ## IDX-R-001 (S-01) — LIVE mode dikunci
 
-**Status:** PASS ✅
+**Status:** OPEN
+
+> Verifikasi audit 18 Juli 2026: request `dry_run=false` memang menerima 403 dan UI mode dikunci, tetapi konfigurasi telah disimpan sebelum 403 dikembalikan. `ENABLE_LIVE_TRADING` juga belum dibaca sebagai server-side gate. Status PASS ditunda sampai kedua kondisi diverifikasi.
 **File:** `app.py`
 **Temuan:** Config API dapat mengubah `DRY_RUN` → `LIVE` melalui POST `/api/config`.
 
@@ -49,7 +51,7 @@ curl -X POST /api/config -d '{"scalper":{"dry_run":false}}'
 
 | ID | Temuan | Status |
 |----|--------|--------|
-| IDX-R-001 | S-01 LIVE mode terkunci | ✅ PASS |
+| IDX-R-001 | S-01 LIVE mode terkunci | 🔄 OPEN |
 | IDX-R-002 | S-03 Health gate START | ⛔ BLOCKED |
 | IDX-R-003 | S-02 Autentikasi | 🔄 OPEN |
 | IDX-R-004 | S-04 Signal EMA20/50 | 🔄 OPEN |
@@ -64,3 +66,20 @@ curl -X POST /api/config -d '{"scalper":{"dry_run":false}}'
 | IDX-R-013 | S-13 Candle chart | 🔄 OPEN |
 | IDX-R-014 | S-14 Multi-worker | 🔄 OPEN |
 | IDX-R-015 | S-15 WS token | 🔄 OPEN |
+| IDX-R-016 | Kredensial default MySQL | 🔄 OPEN |
+
+---
+
+## IDX-R-016 — Kredensial default MySQL di source publik
+
+**Status:** OPEN
+**Level:** CRITICAL
+**File:** `app.py`
+
+**Temuan:** nilai default untuk `IDX_DB_USER` dan `IDX_DB_PASSWORD` tercantum dalam source. Karena repository publik, nilai tersebut harus dianggap terekspos.
+
+**Koreksi wajib:**
+1. Hapus seluruh fallback kredensial dari source; aplikasi harus fail-closed bila environment variable tidak ada.
+2. Rotasi user/password database yang pernah memakai nilai tersebut.
+3. Simpan secret hanya di environment/deployment secret store, bukan Git.
+4. Verifikasi melalui scan secret dan uji startup tanpa secret.
