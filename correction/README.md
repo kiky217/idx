@@ -138,12 +138,12 @@ Catatan: Semua endpoint POST + GET sensitif sudah dilindungi require_api_key(). 
 ### R-002 — Revisi 2026-07-18
 
 Status: pushed
-Commit: `35774e4`
+Commit: `35774e4`, `15c1c62`
 Bukti uji:
 - `/health` return status + issues terstruktur
-- Cek: ticker, staleness, clock skew, MySQL, pair rules, recovery order (7 open order terdeteksi)
-- START ditolak jika health check tidak lolos
-Catatan: Recovery order terdeteksi dengan benar (7 open order dari Indodax).
+- Cek: ticker ✅, staleness ✅, clock skew ✅, MySQL ✅, pair rules ✅, recovery order ✅
+- START ditolak jika health check tidak lolos (7 open order terdeteksi → 503)
+Catatan: Health gate sudah mencakup semua kondisi yang diminta auditor.
 
 ### R-005/R-010 — Revisi 2026-07-18
 
