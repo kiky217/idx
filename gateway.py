@@ -25,7 +25,11 @@ MAX_PAIRS = 10
 CANDLE_PERIODS = {"1m": 60, "5m": 300, "15m": 900}
 
 # ── Static token from Indodax docs (public) ──
-WS_STATIC_TOKEN = "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJwdWJsaWN3cyIsInNjb3BlIjoicHVibGljIiwiaWF0IjoxNjk4NzE2ODAwfQ.JtDgT5aP-Z1qJzT5zS5zS5zS5zS5zS5zS5zS5zS5zS5zS5zS5zS5zA"
+# ── Static token from env (R-015) ──
+WS_STATIC_TOKEN = os.environ.get(
+    "INDODAX_WS_TOKEN",
+    "eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJwdWJsaWN3cyIsInNjb3BlIjoicHVibGljIiwiaWF0IjoxNjk4NzE2ODAwfQ.JtDgT5aP-Z1qJzT5zS5zS5zS5zS5zS5zS5zS5zS5zS5zS5zS5zS5zA"
+)
 
 
 class Candle:
