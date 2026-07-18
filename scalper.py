@@ -154,7 +154,15 @@ class ScalperEngine:
                     continue
 
                 log.info(f"[scalper] {pair} SELL signal conf={signal.confidence:.2f} price={signal.price:,.0f}")
-                result = self.executor.place_market_sell(pair, 0)  # amount=0 means sell all
+                # R-006: Get actual balance instead of amount=0
+                coin = pair.split('_')[0]
+                balance_info = self.executor.get_balance()
+                balance_dict = balance_info.get("balance", {}) if balance_info else {}
+                coin_balance = float(balance_dict.get(coin, 0))
+                if coin_balance <= 0:
+                    log.warning(f"[scalper] {pair} no {coin} balance to sell")
+                    continue
+                result = self.executor.place_market_sell(pair, coin_balance)
             else:
                 continue
 
