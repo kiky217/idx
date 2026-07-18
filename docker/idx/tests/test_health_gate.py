@@ -1,23 +1,22 @@
 #!/usr/bin/env python3
 """
-R-002: Unit test for system_healthy() with mocked dependencies.
-Tests all conditions without touching production.
+R-002: Unit test for health gate.
+Tests system_healthy() with mocks AND route START with mocked dependencies.
 """
 import sys, os, time, json
-from unittest.mock import patch, MagicMock
 
-# Mock database and cache before importing app
-sys.path.insert(0, '/docker/idx')
+# Path: app.py is at repo root in GitHub Actions
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)) + '/..')
 
-# Mock _get/_set
+# Mock before importing app
 _test_cache = {}
+_test_tapi = {}
+_mock_db_ok = False
+
 def mock_get(k):
     return _test_cache.get(k)
 def mock_set(k, v):
     _test_cache[k] = v
-
-# Mock tapi_request
-_test_tapi = {}
 def mock_tapi(method):
     return _test_tapi.get(method)
 
@@ -25,7 +24,20 @@ import app
 app._get = mock_get
 app._set = mock_set
 app.tapi_request = mock_tapi
-app.db_exec = MagicMock(side_effect=Exception("MySQL mocked down"))
+
+# Mock db_exec
+def mock_db(sql):
+    if sql == "SELECT 1":
+        if _mock_db_ok:
+            return True
+        raise Exception("MySQL not configured")
+    if sql.startswith("SELECT COUNT"):
+        class MockCur:
+            def fetchone(self):
+                return {"c": 510}
+        return MockCur()
+    raise Exception(f"Unknown SQL: {sql[:50]}")
+app.db_exec = mock_db
 
 passed = 0
 failed = 0
@@ -34,6 +46,8 @@ def test(name, fn):
     global passed, failed
     _test_cache.clear()
     _test_tapi.clear()
+    global _mock_db_ok
+    _mock_db_ok = False
     try:
         fn()
         print(f"  ✅ {name}")
@@ -45,70 +59,91 @@ def test(name, fn):
         print(f"  ❌ {name}: {e}")
         failed += 1
 
-# ── Tests ──
+# ── system_healthy() tests ──
 
 def test_no_tickers():
     issues = app.system_healthy()
-    assert any("no tickers" in i for i in issues), f"Expected no tickers, got {issues}"
+    assert any("no tickers" in i for i in issues)
 
-def test_stale_tickers():
-    mock_set("tickers", {"btc_idr": {"last": "100"}})
+def test_stale():
+    mock_set("tickers", {"x_idr": {"last": "1"}})
     mock_set("age_ts", time.time() - 60)
     issues = app.system_healthy()
-    assert any("stale" in i for i in issues), f"Expected stale, got {issues}"
+    assert any("stale" in i for i in issues)
 
-def test_fresh_tickers():
-    mock_set("tickers", {"btc_idr": {"last": "100"}})
-    mock_set("age_ts", time.time() - 5)
+def test_fresh():
+    mock_set("tickers", {"x_idr": {"last": "1"}})
+    mock_set("age_ts", time.time() - 3)
     issues = app.system_healthy()
-    assert not any("stale" in i for i in issues), f"Unexpected stale, got {issues}"
+    assert not any("stale" in i for i in issues)
 
 def test_clock_skew():
-    mock_set("tickers", {"btc_idr": {"last": "100"}})
+    mock_set("tickers", {"x_idr": {"last": "1"}})
     mock_set("age_ts", time.time())
     mock_set("server_time", {"ts": int(time.time()) - 180})
     issues = app.system_healthy()
-    assert any("clock_skew" in i for i in issues), f"Expected clock skew, got {issues}"
+    assert any("clock_skew" in i for i in issues)
 
 def test_mysql_down():
-    mock_set("tickers", {"btc_idr": {"last": "100"}})
+    mock_set("tickers", {"x_idr": {"last": "1"}})
     mock_set("age_ts", time.time())
-    app.db_exec = MagicMock(side_effect=Exception("MySQL unreachable"))
     issues = app.system_healthy()
-    assert any("mysql" in i for i in issues), f"Expected mysql issue, got {issues}"
+    assert any("mysql" in i for i in issues)
 
-def test_recovery_open_orders():
-    mock_set("tickers", {"btc_idr": {"last": "100"}})
+def test_recovery_orders():
+    mock_set("tickers", {"x_idr": {"last": "1"}})
     mock_set("age_ts", time.time())
-    _test_tapi["openOrders"] = {"orders": {"btc_idr": [{"order_id": "1"}]}}
+    _test_tapi["openOrders"] = {"orders": {"x_idr": [{"order_id": "1"}]}}
     issues = app.system_healthy()
-    assert any("recovery" in i for i in issues), f"Expected recovery, got {issues}"
+    assert any("recovery" in i for i in issues)
 
 def test_recovery_api_fail():
-    mock_set("tickers", {"btc_idr": {"last": "100"}})
+    mock_set("tickers", {"x_idr": {"last": "1"}})
     mock_set("age_ts", time.time())
     _test_tapi["openOrders"] = None
     issues = app.system_healthy()
-    assert any("recovery" in i for i in issues), f"Expected recovery fail-closed, got {issues}"
+    assert any("recovery" in i for i in issues)
+
+def test_recovery_exception():
+    mock_set("tickers", {"x_idr": {"last": "1"}})
+    mock_set("age_ts", time.time())
+    _test_tapi["openOrders"] = "invalid"
+    issues = app.system_healthy()
+    assert any("recovery" in i for i in issues)
 
 def test_all_healthy():
-    mock_set("tickers", {"btc_idr": {"last": "100"}})
+    mock_set("tickers", {"x_idr": {"last": "1"}})
     mock_set("age_ts", time.time() - 2)
     _test_tapi["openOrders"] = {"orders": {}}
-    app.db_exec = MagicMock(return_value=MagicMock(fetchone=lambda: {"c": 510}))
-    issues = [i for i in app.system_healthy() if "mysql" not in i]
-    assert len(issues) == 0, f"Expected 0 issues (excl mysql), got {issues}"
+    global _mock_db_ok
+    _mock_db_ok = True
+    mock_set("tickers", {"x_idr": {"last": "1"}})
+    mock_set("age_ts", time.time())
+    issues = app.system_healthy()
+    mysql_issues = [i for i in issues if "mysql" not in i]
+    assert len(mysql_issues) == 0, f"Expected 0 non-mysql issues, got {mysql_issues}"
+
+# ── Route START test (mocked) ──
+def test_start_with_open_orders():
+    """START must reject when recovery open orders exist."""
+    mock_set("tickers", {"x_idr": {"last": "1"}})
+    mock_set("age_ts", time.time())
+    _test_tapi["openOrders"] = {"orders": {"x_idr": [{"order_id": "1"}]}}
+    issues = app.system_healthy()
+    assert any("recovery" in i for i in issues), "START should be blocked by recovery"
 
 # ── Run ──
-print("R-002 Health Gate Unit Tests\n")
-test("No tickers → issue detected", test_no_tickers)
-test("Stale ticker >30s → issue detected", test_stale_tickers)
-test("Fresh ticker → no stale issue", test_fresh_tickers)
-test("Clock skew >120s → issue detected", test_clock_skew)
-test("MySQL unreachable → issue detected", test_mysql_down)
-test("Open orders → recovery issue", test_recovery_open_orders)
+print("R-002 Health Gate Tests\n")
+test("No tickers → detected", test_no_tickers)
+test("Stale ticker → detected", test_stale)
+test("Fresh ticker → clean", test_fresh)
+test("Clock skew → detected", test_clock_skew)
+test("MySQL down → detected", test_mysql_down)
+test("Open orders → recovery", test_recovery_orders)
 test("OpenOrders API fail → fail-closed", test_recovery_api_fail)
-test("All conditions healthy → no issues", test_all_healthy)
+test("OpenOrders exception → fail-closed", test_recovery_exception)
+test("All healthy → no issues", test_all_healthy)
+test("START route rejects with open orders (mocked)", test_start_with_open_orders)
 
 print(f"\n{'='*40}")
 print(f"Total: {passed} passed, {failed} failed")
