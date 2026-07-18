@@ -137,13 +137,28 @@ Catatan: Semua endpoint POST + GET sensitif sudah dilindungi require_api_key(). 
 
 ### R-002 — Revisi 2026-07-18
 
-Status: pushed
+Status: FAIL ❌ — auditor
 Commit: `35774e4`, `15c1c62`
 Bukti uji:
 - `/health` return status + issues terstruktur
 - Cek: ticker ✅, staleness ✅, clock skew ✅, MySQL ✅, pair rules ✅, recovery order ✅
 - START ditolak jika health check tidak lolos (7 open order terdeteksi → 503)
 Catatan: Health gate sudah mencakup semua kondisi yang diminta auditor.
+
+**Keputusan auditor:** FAIL.
+
+**Temuan terverifikasi:**
+1. `system_healthy()` mengabaikan error recovery/open-order dan tidak gagal bila `tapi_request("openOrders")` gagal atau mengembalikan kosong; recovery belum fail-closed.
+2. Workflow `.github/workflows/r002-health.yml` hanya mencetak `FAIL`/degraded tanpa `exit 1`, sehingga job dapat tetap sukses saat assertion tidak terpenuhi.
+3. Step “START allowed when healthy” tidak menjalankan START; ia memanggil `POST /api/scalper/stop`, yaitu aksi yang mengubah state deployment.
+4. Workflow belum membuktikan semua kondisi wajib secara terisolasi: ticker kosong, stale, MySQL gagal, pair rules gagal, recovery gagal, dan kondisi sehat.
+
+**Instruksi perbaikan [JANGAN HAPUS]:**
+- Recovery check harus menambahkan issue bila API openOrders gagal/tidak dapat diverifikasi.
+- Pisahkan readiness dari liveness; readiness harus mengembalikan non-2xx saat ada issue.
+- Setiap assertion workflow wajib `exit 1` pada hasil salah.
+- Hapus tindakan START/STOP dari workflow production; gunakan environment staging/disposable dengan fixture/mocks.
+- Tambahkan test terisolasi untuk setiap kondisi wajib dan satu test sehat yang tidak melakukan order.
 
 ### R-005/R-010 — Revisi 2026-07-18
 
