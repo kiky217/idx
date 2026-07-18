@@ -350,8 +350,8 @@ _HTML = """<!DOCTYPE html>
                     <input type="number" id="cfg-min_confidence" min="0" max="1" step="0.05" class="form-control">
                 </div>
                 <div class="col-md-3 config-item">
-                    <label>Mode</label>
-                    <select id="cfg-dry_run" class="form-select"><option value="true">DRY RUN</option><option value="false">LIVE</option></select>
+                    <label>Mode 🔒</label>
+                    <select id="cfg-dry_run" class="form-select" disabled><option value="true">DRY RUN</option></select>
                 </div>
                 <div class="col-md-3 config-item">
                     <label>Max Order (IDR)</label>
@@ -539,6 +539,18 @@ async function toggleScalper(){
     }catch(e){ showToast('Network error','err'); }
 }
 
+function updateHealthStatus(sp){
+    const dataReady = sp && sp.scan_count !== undefined;
+    const btn = document.getElementById('btn-scalper');
+    if(btn && !dataReady) {
+        btn.disabled = true;
+        btn.textContent = 'WAIT...';
+        btn.className = 'btn btn-secondary btn-sm w-100';
+    } else if(btn && dataReady) {
+        btn.disabled = false;
+    }
+}
+
 async function loadConfigForm(){
     try{
         const r = await fetch('/api/config'), cfg = await r.json();
@@ -716,6 +728,7 @@ async function refreshData(){
         }
 
         const sp = d.scalper_status||{};
+        updateHealthStatus(sp);
         document.getElementById('sp-status').textContent = sp.running?'RUNNING':'STOPPED';
         document.getElementById('sp-status').className = sp.running?'text-success':'text-danger';
         setText('sp-mode', sp.mode||'?'); setText('sp-scans', sp.scan_count||0);
@@ -898,6 +911,11 @@ def scalper_status_api():
 
 @app.route("/api/scalper/start", methods=["POST"])
 def scalper_start():
+    # S-01: Only DRY_RUN allowed
+    # S-03: Health gate — check market data is ready
+    tickers = _get("tickers")
+    if not tickers or len(tickers) == 0:
+        return jsonify({"ok": False, "msg": "Market data not ready. Wait for ticker data."}), 503
     if scalper.running:
         return jsonify({"ok": False, "msg": "already running"})
     tickers_fn = lambda: _get("tickers") or {}
@@ -1067,10 +1085,13 @@ def api_config_set():
     scalper.scan_interval = int(sc.get("scan_interval", scalper.scan_interval))
     scalper.min_confidence = float(sc.get("min_confidence", scalper.min_confidence))
     if sc.get("dry_run") is not None:
-        new_mode = "DRY_RUN" if sc["dry_run"] else "LIVE"
+        # S-01: Force DRY_RUN. LIVE mode only via env var.
+        if not sc["dry_run"]:
+            return jsonify({"error": "LIVE mode is disabled. Set ENABLE_LIVE_TRADING=true in environment to enable."}), 403
+        new_mode = "DRY_RUN"
         if new_mode != scalper.mode:
             scalper.mode = new_mode
-            scalper.executor.dry_run = sc["dry_run"]
+            scalper.executor.dry_run = True
     # update risk config
     if hasattr(scalper.risk_manager, "cfg"):
         cfg = scalper.risk_manager.cfg
