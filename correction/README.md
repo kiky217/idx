@@ -180,6 +180,25 @@ Catatan: Health gate sudah mencakup semua kondisi yang diminta auditor.
 
 **Syarat re-audit berikutnya [JANGAN HAPUS]:** rotasi secret; hilangkan fallback credential; gunakan GitHub Actions secret wajib (fail jika kosong); pindahkan test ke fixture/unit atau staging disposable; dan jangan panggil START/STOP/order dari test production.
 
+
+**Integration suite re-audit — 18 Juli 2026:** Status tetap **FAIL**.
+
+**Perbaikan yang lolos:**
+- Tidak ada fallback key pada test saat ini; GitHub Actions secret wajib tersedia dan termasking di log.
+- Workflow tidak memanggil START/STOP/order production.
+
+**Mengapa belum PASS:**
+- Run workflow sukses hanya mencatat `R-002 Tests: 1 passed`; satu-satunya test terdaftar adalah “Health endpoint responds”.
+- Test mengizinkan HTTP 200 atau 503 tanpa assert `status`/isi `issues`; itu bukan verifikasi health gate.
+- Tidak ada test terhadap `POST /api/scalper/start`, sehingga gate tidak dibuktikan menolak setiap kondisi gagal.
+- Tidak ada fixture/mock untuk ticker kosong/stale, clock skew, MySQL gagal, pair rules gagal, recovery API gagal, recovery order ada, dan kondisi sehat.
+- Log memang menunjukkan `status=degraded` karena 7 open order; ini observability yang baik, bukan coverage gate.
+
+**Syarat PASS [JANGAN HAPUS]:** jalankan suite fixture/staging disposable yang menginjeksi tiap dependency dan assert:
+1. setiap kondisi gagal → `POST /api/scalper/start` mengembalikan 503 dengan issue yang diharapkan;
+2. satu kondisi sehat → START mengembalikan 200 dalam dry-run/staging, lalu cleanup internal terkontrol;
+3. workflow fail bila satu assertion gagal.
+
 ### R-005/R-010 — Revisi 2026-07-18
 
 Status: pushed
