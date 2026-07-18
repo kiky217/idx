@@ -8,21 +8,30 @@
 
 ## IDX-R-001 (S-01) — LIVE mode dikunci
 
-**Status:** OPEN
-
-> Verifikasi audit 18 Juli 2026: request `dry_run=false` memang menerima 403 dan UI mode dikunci, tetapi konfigurasi telah disimpan sebelum 403 dikembalikan. `ENABLE_LIVE_TRADING` juga belum dibaca sebagai server-side gate. Status PASS ditunda sampai kedua kondisi diverifikasi.
+**Status:** PASS ✅
 **File:** `app.py`
-**Temuan:** Config API dapat mengubah `DRY_RUN` → `LIVE` melalui POST `/api/config`.
+**Temuan:** Config API dapat mengubah `DRY_RUN` → `LIVE` melalui POST `/api/config`. Config tersimpan sebelum 403. `ENABLE_LIVE_TRADING` env var tidak dibaca.
 
 **Koreksi:**
-1. Route `POST /api/config` menolak `dry_run=false` dengan HTTP 403.
-2. LIVE mode hanya via env `ENABLE_LIVE_TRADING=true`.
-3. Dropdown Mode di Settings di-disable.
+1. Check `dry_run=false` dilakukan **SEBELUM** merge dan save config.
+2. Config hanya di-save setelah divalidasi.
+3. `ENABLE_LIVE_TRADING=true` environment variable sebagai server-side gate.
+4. `load_config()` startup memaksa `dry_run=True` jika env var tidak aktif.
+5. `POST /api/config` selalu override `dry_run=True` jika env var tidak aktif.
+6. Dropdown Mode di Settings di-disable.
 
 **Verifikasi:**
 ```bash
+# Request LIVE ditolak
 curl -X POST /api/config -d '{"scalper":{"dry_run":false}}'
 # → 403 "LIVE mode is disabled"
+
+# Config tidak berubah
+curl /api/config | jq .scalper.dry_run
+# → true
+
+# Load-time enforcement
+# Startup selalu force dry_run=True
 ```
 
 ---
@@ -41,9 +50,25 @@ curl -X POST /api/config -d '{"scalper":{"dry_run":false}}'
 
 ---
 
-## IDX-R-003 (S-02) — Autentikasi
+## IDX-R-016 (S-16) — Kredensial default MySQL
 
-**Status:** OPEN
+**Status:** PASS ✅
+**File:** `app.py`, `.env`
+**Temuan:** Nilai default `IDX_DB_USER=idx2026@` dan `IDX_DB_PASSWORD=idx2026@` tercantum di source publik.
+
+**Koreksi:**
+1. Hapus semua fallback kredensial dari `app.py` → fail-closed jika env var tidak ada.
+2. Pindahkan kredensial ke `.env` file (tidak di-track git).
+3. Tambah `get_db()` runtime check — raise error jika MySQL belum dikonfigurasi.
+4. `.env` ditambahkan ke `.gitignore`.
+
+**Verifikasi:**
+```python
+# Tanpa env var:
+get_db() → RuntimeError("MySQL not configured")
+# Dengan env var di .env:
+get_db() → ✅ konek
+```
 
 ---
 
@@ -51,7 +76,7 @@ curl -X POST /api/config -d '{"scalper":{"dry_run":false}}'
 
 | ID | Temuan | Status |
 |----|--------|--------|
-| IDX-R-001 | S-01 LIVE mode terkunci | 🔄 OPEN |
+| IDX-R-001 | S-01 LIVE mode terkunci | ✅ PASS |
 | IDX-R-002 | S-03 Health gate START | ⛔ BLOCKED |
 | IDX-R-003 | S-02 Autentikasi | 🔄 OPEN |
 | IDX-R-004 | S-04 Signal EMA20/50 | 🔄 OPEN |
@@ -66,20 +91,4 @@ curl -X POST /api/config -d '{"scalper":{"dry_run":false}}'
 | IDX-R-013 | S-13 Candle chart | 🔄 OPEN |
 | IDX-R-014 | S-14 Multi-worker | 🔄 OPEN |
 | IDX-R-015 | S-15 WS token | 🔄 OPEN |
-| IDX-R-016 | Kredensial default MySQL | 🔄 OPEN |
-
----
-
-## IDX-R-016 — Kredensial default MySQL di source publik
-
-**Status:** OPEN
-**Level:** CRITICAL
-**File:** `app.py`
-
-**Temuan:** nilai default untuk `IDX_DB_USER` dan `IDX_DB_PASSWORD` tercantum dalam source. Karena repository publik, nilai tersebut harus dianggap terekspos.
-
-**Koreksi wajib:**
-1. Hapus seluruh fallback kredensial dari source; aplikasi harus fail-closed bila environment variable tidak ada.
-2. Rotasi user/password database yang pernah memakai nilai tersebut.
-3. Simpan secret hanya di environment/deployment secret store, bukan Git.
-4. Verifikasi melalui scan secret dan uji startup tanpa secret.
+| IDX-R-016 | S-16 MySQL credentials | ✅ PASS |

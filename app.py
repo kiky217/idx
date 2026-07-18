@@ -780,10 +780,16 @@ def load_config():
     try:
         if CONFIG_PATH.exists():
             with open(CONFIG_PATH) as f:
-                return json.load(f)
+                cfg = json.load(f)
+            # S-01: Always force dry_run unless ENABLE_LIVE_TRADING=true
+            if os.environ.get("ENABLE_LIVE_TRADING", "").lower() != "true":
+                cfg.setdefault("scalper", {})["dry_run"] = True
+                cfg.setdefault("scalper", {})["mode"] = "DRY_RUN"
+            return cfg
     except Exception as e:
         log.warning(f"[config] load failed: {e}")
-    return dict(DEFAULT_CONFIG)
+    cfg = dict(DEFAULT_CONFIG)
+    return cfg
 
 def save_config(cfg):
     with _config_lock:
@@ -796,17 +802,19 @@ APP_CONFIG = load_config()
 
 # ── MySQL ──
 DB_CONFIG = {
-    "host": os.environ.get("IDX_DB_HOST", "delta_mysql"),
+    "host": os.environ.get("IDX_DB_HOST"),
     "port": int(os.environ.get("IDX_DB_PORT", 3306)),
-    "user": os.environ.get("IDX_DB_USER", "idx2026@"),
-    "password": os.environ.get("IDX_DB_PASSWORD", "idx2026@"),
-    "database": os.environ.get("IDX_DB_NAME", "idx_db"),
+    "user": os.environ.get("IDX_DB_USER"),
+    "password": os.environ.get("IDX_DB_PASSWORD"),
+    "database": os.environ.get("IDX_DB_NAME"),
     "charset": "utf8mb4",
     "cursorclass": pymysql.cursors.DictCursor,
 }
 
 def get_db():
-    return pymysql.connect(**DB_CONFIG)
+    # S-16: Fail-closed — no default credentials
+    if not DB_CONFIG["host"] or not DB_CONFIG["user"] or not DB_CONFIG["password"] or not DB_CONFIG["database"]:
+        raise RuntimeError("MySQL not configured. Set IDX_DB_HOST, IDX_DB_USER, IDX_DB_PASSWORD, IDX_DB_NAME env vars.")
 
 def db_exec(sql, params=None):
     conn = get_db()
@@ -1071,6 +1079,14 @@ def api_config_get():
 def api_config_set():
     global APP_CONFIG, scalper
     data = request.get_json(force=True) or {}
+    
+    # S-01: Check dry_run BEFORE saving anything
+    scalper_cfg = data.get("scalper", {})
+    if scalper_cfg.get("dry_run") is not None and not scalper_cfg["dry_run"]:
+        # Check if ENABLE_LIVE_TRADING env allows it
+        if os.environ.get("ENABLE_LIVE_TRADING", "").lower() != "true":
+            return jsonify({"error": "LIVE mode is disabled. Set ENABLE_LIVE_TRADING=true in environment to enable."}), 403
+    
     # deep merge
     merged = dict(DEFAULT_CONFIG)
     for section in ("scalper", "risk", "ui"):
@@ -1078,20 +1094,22 @@ def api_config_set():
             merged[section] = {**merged[section], **APP_CONFIG[section]}
         if section in data:
             merged[section] = {**merged[section], **data[section]}
+    
+    # S-01: Force DRY_RUN in merged config (env var can override)
+    if os.environ.get("ENABLE_LIVE_TRADING", "").lower() != "true":
+        merged["scalper"]["dry_run"] = True
+        merged["scalper"]["mode"] = "DRY_RUN"
+    
     APP_CONFIG = save_config(merged)
-    # apply to running scalper
+    
+    # apply to running scalper (safely)
     sc = APP_CONFIG.get("scalper", {})
     rk = APP_CONFIG.get("risk", {})
     scalper.scan_interval = int(sc.get("scan_interval", scalper.scan_interval))
     scalper.min_confidence = float(sc.get("min_confidence", scalper.min_confidence))
-    if sc.get("dry_run") is not None:
-        # S-01: Force DRY_RUN. LIVE mode only via env var.
-        if not sc["dry_run"]:
-            return jsonify({"error": "LIVE mode is disabled. Set ENABLE_LIVE_TRADING=true in environment to enable."}), 403
-        new_mode = "DRY_RUN"
-        if new_mode != scalper.mode:
-            scalper.mode = new_mode
-            scalper.executor.dry_run = True
+    # Always enforce DRY_RUN mode
+    scalper.mode = "DRY_RUN"
+    scalper.executor.dry_run = True
     # update risk config
     if hasattr(scalper.risk_manager, "cfg"):
         cfg = scalper.risk_manager.cfg
