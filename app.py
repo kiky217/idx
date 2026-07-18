@@ -881,16 +881,19 @@ def system_healthy():
     # MySQL
     try:
         db_exec("SELECT 1")
+    except RuntimeError as e:
+        issues.append(f"mysql: {e}")
     except Exception:
         issues.append("mysql: unreachable")
-    # Pair rules loaded — check if MySQL has pairs
-    try:
-        cur = db_exec("SELECT COUNT(*) as c FROM pairs")
-        row = cur.fetchone()
-        if row and row.get("c", 0) == 0:
-            issues.append("pair_rules: empty")
-    except Exception:
-        pass  # tables might not be populated yet
+    else:
+        # Pair rules — only check if MySQL is reachable
+        try:
+            cur = db_exec("SELECT COUNT(*) as c FROM pairs")
+            row = cur.fetchone()
+            if row and row.get("c", 0) == 0:
+                issues.append("pair_rules: empty")
+        except Exception as e:
+            issues.append(f"pair_rules: error ({e})")
     return issues
 
 @app.route("/")
