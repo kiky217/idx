@@ -11,4 +11,4 @@ COPY app.py indodax_signal.py executor.py risk.py scalper.py pnl.py telegram.py 
 
 EXPOSE 5000
 
-CMD ["gunicorn","-w","2","-b","0.0.0.0:8925","--timeout","30","app:app"]
+CMD ["gunicorn","-w","1","-b","0.0.0.0:8925","--timeout","30","app:app"]
